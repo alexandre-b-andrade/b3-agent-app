@@ -333,7 +333,7 @@ async function readJsonFromRepo(filename) {
   }
   const data = await resp.json();
   const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, "")), c => c.charCodeAt(0));
-  return JSON.parse(new TextDecoder().decode(bytes));
+  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
 }
 
 // ── Workflow triggers ─────────────────────────────────────
@@ -610,7 +610,8 @@ async function executeStop() {
     const metaResp = await ghFetch("/contents/portfolio_state.json");
     if (!metaResp.ok) { toast("Erro ao ler portfolio_state.json"); return; }
     const meta = await metaResp.json();
-    const state = JSON.parse(atob(meta.content.replace(/\n/g, "")));
+    const bytes = Uint8Array.from(atob(meta.content.replace(/\n/g, "")), c => c.charCodeAt(0));
+    const state = JSON.parse(new TextDecoder("utf-8").decode(bytes));
     const pos = (state.positions || []).find(p => p.ticker === ticker);
     if (!pos) { toast(`${ticker} não encontrado na carteira.`); return; }
     const oldStop = pos.stop;
