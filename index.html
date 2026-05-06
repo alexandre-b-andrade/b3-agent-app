@@ -255,9 +255,10 @@ a{color:var(--accent)}
   <div class="sheet">
     <h3>✏️ Atualizar Stop</h3>
     <div class="sheet-row">
-      <input type="text" id="stop-ticker" placeholder="Ticker (ex: VALE3)" style="text-transform:uppercase">
-      <input type="number" id="stop-value" placeholder="Valor (ex: 64.50)" step="0.01">
+      <select id="stop-ticker" onchange="_updateStopHint()" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.9rem;outline:none;background:var(--card)"></select>
+      <input type="number" id="stop-value" placeholder="Novo stop (ex: 64.50)" step="0.01">
     </div>
+    <div id="stop-current" style="font-size:.78rem;color:var(--muted);margin-top:6px"></div>
     <div class="btn-row" style="margin-top:12px">
       <button class="btn btn-primary" onclick="executeStop()">Atualizar</button>
       <button class="btn btn-ghost" onclick="closeStopModal()">Cancelar</button>
@@ -268,6 +269,9 @@ a{color:var(--accent)}
 <div id="toast"></div>
 
 <script>
+// ── Estado global ─────────────────────────────────────────
+let _portfolioState = null;
+
 // ── Config ────────────────────────────────────────────────
 const CFG = {
   get ghToken()     { return localStorage.getItem("b3_gh_token") || ""; },
@@ -389,6 +393,7 @@ async function loadPortfolio() {
     el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais em ⓘ.</div>';
     return;
   }
+  _portfolioState = state;
   renderPortfolio(state);
 }
 
@@ -609,7 +614,23 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 // ── Stop modal ────────────────────────────────────────────
-function openStopModal()  { document.getElementById("stop-overlay").classList.add("open"); }
+function _updateStopHint() {
+  const sel = document.getElementById("stop-ticker");
+  const hint = document.getElementById("stop-current");
+  const pos = (_portfolioState?.positions || []).find(p => p.ticker === sel.value);
+  hint.textContent = pos ? `Stop atual: R$ ${pos.stop.toFixed(2)}  |  Preço: R$ ${pos.current_price.toFixed(2)}` : "";
+}
+
+function openStopModal() {
+  const sel = document.getElementById("stop-ticker");
+  const positions = (_portfolioState?.positions || []);
+  sel.innerHTML = positions.length
+    ? positions.map(p => `<option value="${p.ticker}">${p.ticker}</option>`).join("")
+    : '<option value="">— carteira não carregada —</option>';
+  document.getElementById("stop-value").value = "";
+  _updateStopHint();
+  document.getElementById("stop-overlay").classList.add("open");
+}
 function closeStopModal() { document.getElementById("stop-overlay").classList.remove("open"); }
 
 async function executeStop() {
