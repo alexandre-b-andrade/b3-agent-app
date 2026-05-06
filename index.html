@@ -9,151 +9,121 @@
 <title>B3 Agent</title>
 <link rel="manifest" href="manifest.json">
 <style>
-/* ── Reset e base ───────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --navy:   #1a1a2e;
-  --blue:   #16213e;
-  --accent: #0f3460;
-  --gold:   #e2b04a;
-  --green:  #2ecc71;
-  --red:    #e74c3c;
-  --warn:   #f39c12;
-  --bg:     #f0f2f5;
-  --card:   #ffffff;
-  --text:   #222222;
-  --muted:  #888888;
-  --border: #e0e0e0;
-  --radius: 12px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a1a2e;--blue:#16213e;--accent:#0f3460;
+  --gold:#e2b04a;--green:#2ecc71;--red:#e74c3c;--warn:#f39c12;
+  --bg:#f0f2f5;--card:#fff;--text:#222;--muted:#888;--border:#e0e0e0;
+  --radius:12px;--safe-bottom:env(safe-area-inset-bottom,0px);
 }
-html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); overflow: hidden; }
+html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%}
+header{background:var(--navy);color:#fff;padding:14px 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+header h1{font-size:1.1rem;font-weight:700;flex:1}
+header span{font-size:.75rem;opacity:.6}
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:12px;display:none}
+.page.active{display:block}
+nav{display:flex;background:var(--navy);flex-shrink:0;padding-bottom:calc(4px + var(--safe-bottom))}
+nav button{flex:1;background:none;border:none;color:rgba(255,255,255,.5);padding:10px 2px 6px;font-size:.58rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s}
+nav button.active{color:var(--gold)}
+nav button svg{width:19px;height:19px}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card-title{font-size:.7rem;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:8px;letter-spacing:.05em}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:8px;font-size:.85rem;font-weight:600;border:none;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-gold{background:var(--gold);color:var(--navy)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
-/* ── Layout ────────────────────────────────────────────── */
-#app { display: flex; flex-direction: column; height: 100%; }
-header { background: var(--navy); color: #fff; padding: 14px 16px 10px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; }
-header span { font-size: 0.75rem; opacity: 0.6; }
-.pages { flex: 1; overflow: hidden; position: relative; }
-.page { position: absolute; inset: 0; overflow-y: auto; padding: 12px; display: none; }
-.page.active { display: block; }
+/* ── Portfolio table (compact, no horizontal scroll) ── */
+.pt{width:100%;font-size:.73rem;border-collapse:collapse}
+.pt th{text-align:right;font-weight:600;color:var(--muted);padding:3px 4px;font-size:.63rem;border-bottom:1px solid var(--border)}
+.pt th:first-child{text-align:left}
+.pt td{padding:6px 4px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums}
+.pt td:first-child{text-align:left;font-weight:600}
+.pt tr:last-child td{border-bottom:none;font-weight:700;background:#f8f8f8}
+.up{color:var(--green)}.down{color:var(--red)}.warn{color:var(--warn)}
+.blurred{filter:blur(5px);user-select:none;pointer-events:none}
 
-/* ── Bottom nav ─────────────────────────────────────────── */
-nav {
-  display: flex; background: var(--navy); flex-shrink: 0;
-  padding-bottom: calc(4px + var(--safe-bottom));
-}
-nav button {
-  flex: 1; background: none; border: none; color: rgba(255,255,255,0.5);
-  padding: 10px 4px 6px; font-size: 0.6rem; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s;
-}
-nav button.active { color: var(--gold); }
-nav button svg { width: 20px; height: 20px; }
+/* ── Status chips ── */
+.chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600}
+.chip-green{background:#e8f8f0;color:#1a7a45}
+.chip-red{background:#fdecea;color:#c0392b}
+.chip-warn{background:#fef5e4;color:#9a6a00}
 
-/* ── Cards ──────────────────────────────────────────────── */
-.card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-.card-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; letter-spacing: .05em; }
+/* ── Rec cards ── */
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:.78rem;color:var(--muted);margin-bottom:8px}
+.rec-grid strong{color:var(--text)}
 
-/* ── Botões de ação ─────────────────────────────────────── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: opacity .15s, transform .1s; }
-.btn:active { transform: scale(.97); }
-.btn-primary { background: var(--navy); color: #fff; }
-.btn-gold    { background: var(--gold); color: var(--navy); }
-.btn-green   { background: var(--green); color: #fff; }
-.btn-red     { background: var(--red); color: #fff; }
-.btn-ghost   { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
-.btn:disabled { opacity: .45; pointer-events: none; }
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+/* ── Chat ── */
+#chat-page{display:none;flex-direction:column;padding:0}
+#chat-page.active{display:flex}
+#messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:10px 13px;border-radius:14px;font-size:.85rem;line-height:1.5;word-break:break-word}
+.msg-user{background:var(--navy);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg-bot{background:var(--card);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.msg-bot code{background:#f0f0f0;padding:1px 4px;border-radius:4px;font-size:.82em}
+#chat-input-row{padding:10px 12px calc(10px + var(--safe-bottom));background:var(--card);display:flex;gap:8px;border-top:1px solid var(--border);flex-shrink:0}
+#chat-input{flex:1;border:1.5px solid var(--border);border-radius:22px;padding:9px 14px;font-size:.9rem;outline:none;resize:none;height:40px;max-height:100px;overflow-y:auto}
+#chat-input:focus{border-color:var(--accent)}
+#send-btn{width:40px;height:40px;border-radius:50%;background:var(--navy);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-/* ── Portfolio table ────────────────────────────────────── */
-.portfolio-table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
-.portfolio-table th { text-align: right; font-weight: 600; color: var(--muted); padding: 4px 6px; font-size: 0.68rem; border-bottom: 1px solid var(--border); }
-.portfolio-table th:first-child { text-align: left; }
-.portfolio-table td { padding: 7px 6px; border-bottom: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
-.portfolio-table td:first-child { text-align: left; font-weight: 600; }
-.portfolio-table tr:last-child td { border-bottom: none; font-weight: 700; background: #f8f8f8; }
-.up   { color: var(--green); }
-.down { color: var(--red); }
-.warn { color: var(--warn); }
+/* ── Settings / Info ── */
+.setting-group{margin-bottom:14px}
+.setting-label{font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:4px;display:block}
+.setting-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.85rem;outline:none;background:var(--card)}
+.setting-input:focus{border-color:var(--accent)}
+.setting-hint{font-size:.7rem;color:var(--muted);margin-top:3px}
+.info-p{font-size:.82rem;line-height:1.7;color:var(--text)}
+.info-p strong{color:var(--navy)}
+.info-p h4{font-size:.78rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;margin:14px 0 4px}
 
-/* ── Status chips ───────────────────────────────────────── */
-.chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
-.chip-green { background: #e8f8f0; color: #1a7a45; }
-.chip-red   { background: #fdecea; color: #c0392b; }
-.chip-warn  { background: #fef5e4; color: #9a6a00; }
-.chip-blue  { background: #e8eef8; color: #1a3a7a; }
+/* ── Stop modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:100;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px calc(20px + var(--safe-bottom));width:100%;max-width:480px}
+.sheet h3{font-size:1rem;margin-bottom:14px}
+.sheet-row{display:flex;gap:10px}
+.sheet-row input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.9rem;outline:none}
+.sheet-row input:focus{border-color:var(--accent)}
 
-/* ── Recomendações ──────────────────────────────────────── */
-.rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: .78rem; color: var(--muted); margin-bottom: 8px; }
-.rec-grid strong { color: var(--text); }
+/* ── Toast ── */
+#toast{position:fixed;bottom:calc(70px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:9px 18px;border-radius:20px;font-size:.82rem;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:200;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── Chat ───────────────────────────────────────────────── */
-#chat-page { display: none; flex-direction: column; padding: 0; }
-#chat-page.active { display: flex; }
-#messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-.msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; font-size: 0.85rem; line-height: 1.5; word-break: break-word; }
-.msg-user { background: var(--navy); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-.msg-bot  { background: var(--card); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-.msg-bot code { background: #f0f0f0; padding: 1px 4px; border-radius: 4px; font-size: 0.82em; }
-#chat-input-row { padding: 10px 12px calc(10px + var(--safe-bottom)); background: var(--card); display: flex; gap: 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
-#chat-input { flex: 1; border: 1.5px solid var(--border); border-radius: 22px; padding: 9px 14px; font-size: 0.9rem; outline: none; resize: none; height: 40px; max-height: 100px; overflow-y: auto; }
-#chat-input:focus { border-color: var(--accent); }
-#send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--navy); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
-/* ── Settings ───────────────────────────────────────────── */
-.setting-group { margin-bottom: 14px; }
-.setting-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; display: block; }
-.setting-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; outline: none; background: var(--card); }
-.setting-input:focus { border-color: var(--accent); }
-.setting-hint { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
-
-/* ── Stop modal ─────────────────────────────────────────── */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 100; align-items: flex-end; justify-content: center; }
-.overlay.open { display: flex; }
-.sheet { background: var(--card); border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + var(--safe-bottom)); width: 100%; max-width: 480px; }
-.sheet h3 { font-size: 1rem; margin-bottom: 14px; }
-.sheet-row { display: flex; gap: 10px; }
-.sheet-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; outline: none; }
-.sheet-row input:focus { border-color: var(--accent); }
-
-/* ── Toast ──────────────────────────────────────────────── */
-#toast { position: fixed; bottom: calc(70px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: #fff; padding: 9px 18px; border-radius: 20px; font-size: 0.82rem; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 200; white-space: nowrap; max-width: 90vw; text-align: center; }
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* ── Loading spinner ────────────────────────────────────── */
-.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Misc ───────────────────────────────────────────────── */
-.section-title { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 16px 0 8px; }
-.empty-state { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 30px 0; }
-a { color: var(--accent); }
+/* ── Misc ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section-title{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px}
+.empty-state{text-align:center;color:var(--muted);font-size:.85rem;padding:30px 0}
+a{color:var(--accent)}
 </style>
 </head>
-
 <body>
 <div id="app">
 
-  <!-- Header -->
   <header>
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e2b04a" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
     <h1>B3 Agent</h1>
     <span id="header-status">—</span>
   </header>
 
-  <!-- Pages -->
   <div class="pages">
 
     <!-- Dashboard -->
     <div class="page active" id="dash-page">
-
       <div class="card">
-        <div class="card-title">Carteira</div>
-        <div id="portfolio-content"><div class="empty-state">Configure as credenciais em ⚙️ e toque em Atualizar.</div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="card-title" style="margin-bottom:0">Carteira</div>
+          <button class="btn btn-ghost" id="btn-privacy" onclick="togglePrivacy()" style="padding:4px 10px;font-size:.75rem">👁 Ocultar</button>
+        </div>
+        <div id="portfolio-content"><div class="empty-state">Configure as credenciais em ⚙️</div></div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="loadPortfolio()">🔄 Atualizar</button>
-          <button class="btn btn-ghost" onclick="openStopModal()">✏️ Editar stop</button>
+          <button class="btn btn-ghost" onclick="openStopModal()">✏️ Stop</button>
         </div>
       </div>
 
@@ -163,31 +133,28 @@ a { color: var(--accent); }
           <button class="btn btn-gold" id="btn-rodar" onclick="triggerRodar()">⚡ Rodar agora</button>
           <button class="btn btn-primary" id="btn-atualizar" onclick="triggerAtualizar()">📋 Processar notas</button>
         </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Pipeline completo ~10 min. Recomendações ficam disponíveis na aba ✦.</p>
+        <p style="font-size:.72rem;color:var(--muted);margin-top:8px">Pipeline completo ~10 min.</p>
       </div>
 
-      <div class="card" id="status-card">
+      <div class="card">
         <div class="card-title">Status</div>
         <div id="status-content"><div class="empty-state">Carregando…</div></div>
       </div>
-
-    </div><!-- /dash-page -->
+    </div>
 
     <!-- Recomendações -->
     <div class="page" id="rec-page">
       <div class="card">
         <div id="rec-meta"><div style="font-size:.82rem;color:var(--muted)">Carregando…</div></div>
-        <div class="btn-row">
-          <button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button>
-        </div>
+        <div class="btn-row"><button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button></div>
       </div>
       <div id="rec-content"></div>
-    </div><!-- /rec-page -->
+    </div>
 
     <!-- Chat -->
     <div class="page" id="chat-page">
       <div id="messages">
-        <div class="msg msg-bot">Olá! Sou o B3 Agent. Pergunte sobre sua carteira, tickers ou recomendações.</div>
+        <div class="msg msg-bot">Olá! Sou o B3 Agent. Pergunte sobre carteira, tickers ou recomendações.</div>
       </div>
       <div id="chat-input-row">
         <textarea id="chat-input" placeholder="Pergunte sobre sua carteira…" rows="1"
@@ -196,12 +163,43 @@ a { color: var(--accent); }
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
-    </div><!-- /chat-page -->
+    </div>
 
-    <!-- Settings -->
-    <div class="page" id="settings-page">
+    <!-- Info -->
+    <div class="page" id="info-page">
       <div class="card">
-        <div class="card-title">Credenciais</div>
+        <div class="card-title">O que é o B3 Agent?</div>
+        <div class="info-p">
+          O <strong>B3 Agent</strong> é um sistema pessoal de recomendação de <strong>swing trade</strong> para ações da B3 (Ibovespa). Ele roda automaticamente todos os dias úteis às <strong>13h BRT</strong> e entrega recomendações baseadas em análise técnica, fundamentalista e de notícias.
+
+          <h4>Como funciona</h4>
+          O pipeline executa 10 etapas em sequência:
+          <ol style="margin:6px 0 0 16px;line-height:2">
+            <li>Carrega carteira e estado atual</li>
+            <li>Coleta fontes: RSS, scraping de 8 sites, YouTube, CVM, yfinance</li>
+            <li>Calcula sinais técnicos (RSI, médias, volume)</li>
+            <li>Pontua tickers de 0–100</li>
+            <li>Filtra candidatos e monta contexto</li>
+            <li>Envia para Claude (IA) que gera recomendações</li>
+            <li>Gera relatório HTML e TXT</li>
+            <li>Faz upload para o Google Drive</li>
+            <li>Grava no Excel e atualiza memória</li>
+            <li>Envia resumo via Telegram</li>
+          </ol>
+
+          <h4>Fontes de dados</h4>
+          RSS (InfoMoney, CNN Brasil, Suno, Reuters), scraping de sites financeiros, transcrições de canais YouTube, Fatos Relevantes da CVM, dados de mercado via yfinance (preço, RSI, médias, P/L, P/VP, DY).
+
+          <h4>Carteira reconciliada</h4>
+          Notas de corretagem da Clear são lidas automaticamente do Google Drive e processadas por IA para manter a carteira sempre atualizada.
+
+          <h4>Este app</h4>
+          PWA instalável no Android — sem APK, sem Play Store. Lê dados ao vivo do repositório privado GitHub via API. Credenciais ficam apenas no dispositivo (localStorage).
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Configurações</div>
         <div class="setting-group">
           <label class="setting-label">GitHub Token (PAT com repo + workflow)</label>
           <input type="password" id="cfg-gh-token" class="setting-input" placeholder="ghp_…">
@@ -219,31 +217,15 @@ a { color: var(--accent); }
       </div>
 
       <div class="card">
-        <div class="card-title">Instalar no Android</div>
-        <p style="font-size:0.82rem;line-height:1.6">
-          Este app é um <strong>PWA</strong> — não precisa de APK nem Google Play.<br><br>
-          <strong>Como instalar:</strong><br>
-          1. Abra esta página no <strong>Chrome</strong> no seu Android<br>
-          2. Toque nos 3 pontinhos (⋮) no canto superior direito<br>
-          3. Selecione <strong>"Adicionar à tela inicial"</strong><br>
-          4. Confirme — o ícone do B3 Agent aparecerá na tela inicial<br><br>
-          Após instalar, o app abre em tela cheia, sem barra do browser, como um app nativo.
-        </p>
+        <div class="card-title">Notificações</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Receba um aviso quando novas recomendações ficarem prontas.</p>
+        <button class="btn btn-ghost" onclick="requestNotifPermission()">🔔 Ativar notificações</button>
+        <div id="notif-status" style="font-size:.72rem;color:var(--muted);margin-top:6px"></div>
       </div>
-
-      <div class="card">
-        <div class="card-title">Sobre</div>
-        <p style="font-size:0.8rem;line-height:1.6;color:var(--muted)">
-          B3 Agent v2.0 — uso pessoal.<br>
-          Credenciais armazenadas apenas no dispositivo (localStorage).<br>
-          Dados lidos diretamente do GitHub e Anthropic API.
-        </p>
-      </div>
-    </div><!-- /settings-page -->
+    </div>
 
   </div><!-- /pages -->
 
-  <!-- Bottom Navigation -->
   <nav>
     <button class="active" id="nav-dash" onclick="showPage('dash')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -257,13 +239,13 @@ a { color: var(--accent); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Chat
     </button>
-    <button id="nav-settings" onclick="showPage('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Config
+    <button id="nav-info" onclick="showPage('info')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Info
     </button>
   </nav>
 
-</div><!-- /app -->
+</div>
 
 <!-- Stop Modal -->
 <div class="overlay" id="stop-overlay" onclick="if(event.target===this)closeStopModal()">
@@ -280,31 +262,31 @@ a { color: var(--accent); }
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
 // ── Config ────────────────────────────────────────────────
 const CFG = {
-  get ghToken()    { return localStorage.getItem("b3_gh_token") || ""; },
-  get ghRepo()     { return localStorage.getItem("b3_gh_repo") || ""; },
+  get ghToken()     { return localStorage.getItem("b3_gh_token") || ""; },
+  get ghRepo()      { return localStorage.getItem("b3_gh_repo") || ""; },
   get anthropicKey(){ return localStorage.getItem("b3_anthropic_key") || ""; },
 };
+let privacyOn = localStorage.getItem("b3_privacy") === "1";
 
+// ── Settings ──────────────────────────────────────────────
 function saveSettings() {
-  localStorage.setItem("b3_gh_token",       document.getElementById("cfg-gh-token").value.trim());
-  localStorage.setItem("b3_gh_repo",        document.getElementById("cfg-gh-repo").value.trim());
-  localStorage.setItem("b3_anthropic_key",  document.getElementById("cfg-anthropic-key").value.trim());
+  localStorage.setItem("b3_gh_token",      document.getElementById("cfg-gh-token").value.trim());
+  localStorage.setItem("b3_gh_repo",       document.getElementById("cfg-gh-repo").value.trim());
+  localStorage.setItem("b3_anthropic_key", document.getElementById("cfg-anthropic-key").value.trim());
   toast("Configurações salvas!");
-  loadPortfolio();
-  loadStatus();
-  loadRecommendations();
+  loadPortfolio(); loadStatus(); loadRecommendations();
 }
 
 function loadSettingsUI() {
-  document.getElementById("cfg-gh-token").value     = CFG.ghToken;
-  document.getElementById("cfg-gh-repo").value      = CFG.ghRepo;
-  document.getElementById("cfg-anthropic-key").value= CFG.anthropicKey;
+  document.getElementById("cfg-gh-token").value      = CFG.ghToken;
+  document.getElementById("cfg-gh-repo").value       = CFG.ghRepo;
+  document.getElementById("cfg-anthropic-key").value = CFG.anthropicKey;
+  updateNotifStatus();
 }
 
 // ── Navigation ────────────────────────────────────────────
@@ -313,7 +295,7 @@ function showPage(name) {
   document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
   document.getElementById(name + "-page").classList.add("active");
   document.getElementById("nav-" + name).classList.add("active");
-  if (name === "settings") loadSettingsUI();
+  if (name === "info") loadSettingsUI();
   if (name === "rec") loadRecommendations();
 }
 
@@ -328,7 +310,7 @@ function toast(msg, dur = 2500) {
 // ── GitHub API helpers ────────────────────────────────────
 async function ghFetch(path, opts = {}) {
   const url = `https://api.github.com/repos/${CFG.ghRepo}${path}`;
-  const resp = await fetch(url, {
+  return fetch(url, {
     ...opts,
     headers: {
       Authorization: `token ${CFG.ghToken}`,
@@ -337,23 +319,23 @@ async function ghFetch(path, opts = {}) {
       ...(opts.headers || {}),
     },
   });
-  return resp;
 }
 
 async function readJsonFromRepo(filename) {
   if (!CFG.ghRepo || !CFG.ghToken) return null;
   const resp = await ghFetch(`/contents/${filename}`);
   if (!resp.ok) {
-    toast(`Erro ${resp.status} ao ler ${filename} — verifique token e repo em ⚙️`, 5000);
+    toast(`Erro ${resp.status} ao ler ${filename} — verifique token/repo em ⓘ`, 5000);
     return null;
   }
   const data = await resp.json();
   return JSON.parse(atob(data.content.replace(/\n/g, "")));
 }
 
+// ── Workflow triggers ─────────────────────────────────────
 async function triggerWorkflow(workflow, label) {
-  if (!CFG.ghToken) { toast("Token GitHub não salvo — vá em ⚙️ e clique 💾 Salvar"); return; }
-  if (!CFG.ghRepo)  { toast("Repositório não salvo — vá em ⚙️ e clique 💾 Salvar"); return; }
+  if (!CFG.ghToken) { toast("Token não salvo — vá em ⓘ e clique 💾 Salvar"); return; }
+  if (!CFG.ghRepo)  { toast("Repositório não salvo — vá em ⓘ e clique 💾 Salvar"); return; }
   const btn = document.getElementById(`btn-${label}`);
   const orig = btn.innerHTML;
   btn.innerHTML = `<span class="spinner"></span> Acionando…`;
@@ -364,7 +346,7 @@ async function triggerWorkflow(workflow, label) {
       body: JSON.stringify({ ref: "main" }),
     });
     if (resp.status === 204) {
-      toast(`✅ Workflow acionado! (~10 min)`);
+      toast("✅ Workflow acionado! (~10 min)");
     } else {
       toast(`⚠️ Erro ${resp.status}. Verifique o token (escopo workflow).`);
     }
@@ -375,9 +357,23 @@ async function triggerWorkflow(workflow, label) {
     btn.disabled = false;
   }
 }
-
-function triggerRodar()    { triggerWorkflow("daily_run.yml",      "rodar"); }
+function triggerRodar()    { triggerWorkflow("daily_run.yml",       "rodar"); }
 function triggerAtualizar(){ triggerWorkflow("update_portfolio.yml","atualizar"); }
+
+// ── Privacy toggle ────────────────────────────────────────
+function togglePrivacy() {
+  privacyOn = !privacyOn;
+  localStorage.setItem("b3_privacy", privacyOn ? "1" : "0");
+  document.getElementById("btn-privacy").textContent = privacyOn ? "👁 Mostrar" : "👁 Ocultar";
+  const tbody = document.querySelector(".pt tbody");
+  if (tbody) applyPrivacy(tbody);
+}
+
+function applyPrivacy(tbody) {
+  tbody.querySelectorAll("td:not(:first-child):not(:last-child)").forEach(td => {
+    td.classList.toggle("blurred", privacyOn);
+  });
+}
 
 // ── Portfolio ─────────────────────────────────────────────
 async function loadPortfolio() {
@@ -385,7 +381,7 @@ async function loadPortfolio() {
   el.innerHTML = '<div class="empty-state">Carregando…</div>';
   const state = await readJsonFromRepo("portfolio_state.json");
   if (!state) {
-    el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais em ⚙️.</div>';
+    el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais em ⓘ.</div>';
     return;
   }
   renderPortfolio(state);
@@ -399,6 +395,7 @@ function renderPortfolio(state) {
     return;
   }
 
+  // Compact table: Ticker | Total | Atual | Stop | P&L%
   let rows = positions.map(p => {
     const pnl = p.pnl_pct || 0;
     const cls = pnl >= 0 ? "up" : "down";
@@ -406,9 +403,7 @@ function renderPortfolio(state) {
     const vtot = p.valor_total || (p.qty * p.current_price);
     return `<tr>
       <td>${p.ticker}</td>
-      <td>${p.qty.toLocaleString("pt-BR")}</td>
       <td>${fmtBRL(vtot)}</td>
-      <td>${fmtBRL(p.avg_price)}</td>
       <td>${fmtBRL(p.current_price)}</td>
       <td>${fmtBRL(p.stop)}</td>
       <td class="${cls}">${sign}${pnl.toFixed(1)}%</td>
@@ -417,28 +412,26 @@ function renderPortfolio(state) {
 
   const cash  = state.cash || 0;
   const total = state.total_capital || 0;
-  rows += `<tr><td>CASH</td><td></td><td>${fmtBRL(cash)}</td><td></td><td></td><td></td><td></td></tr>`;
-  rows += `<tr><td>TOTAL</td><td></td><td>${fmtBRL(total)}</td><td></td><td></td><td></td><td></td></tr>`;
+  rows += `<tr><td>CASH</td><td>${fmtBRL(cash)}</td><td></td><td></td><td></td></tr>`;
+  rows += `<tr><td>TOTAL</td><td>${fmtBRL(total)}</td><td></td><td></td><td></td></tr>`;
 
-  el.innerHTML = `
-    <div style="overflow-x:auto">
-    <table class="portfolio-table">
-      <thead><tr>
-        <th>Ticker</th><th>Qtd</th><th>Total</th>
-        <th>Entrada</th><th>Atual</th><th>Stop</th><th>P&amp;L%</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    </div>`;
+  el.innerHTML = `<table class="pt">
+    <thead><tr><th>Ticker</th><th>Total</th><th>Atual</th><th>Stop</th><th>P&amp;L%</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+
+  const tbody = el.querySelector("tbody");
+  if (privacyOn) applyPrivacy(tbody);
 
   positions.forEach(p => {
     if (p.stop > 0 && p.current_price > 0) {
       const dist = (p.current_price - p.stop) / p.current_price * 100;
-      if (dist > 0 && dist < 3) {
-        el.innerHTML += `<div style="margin-top:8px"><span class="chip chip-warn">⚠️ ${p.ticker} a ${dist.toFixed(1)}% do stop!</span></div>`;
-      }
+      if (dist > 0 && dist < 3)
+        el.innerHTML += `<div style="margin-top:6px"><span class="chip chip-warn">⚠️ ${p.ticker} a ${dist.toFixed(1)}% do stop</span></div>`;
     }
   });
+
+  document.getElementById("btn-privacy").textContent = privacyOn ? "👁 Mostrar" : "👁 Ocultar";
 }
 
 function fmtBRL(v) {
@@ -450,21 +443,21 @@ function fmtBRL(v) {
 async function loadStatus() {
   const el = document.getElementById("status-content");
   const mem = await readJsonFromRepo("agent_memory.json");
-  if (!mem) {
-    el.innerHTML = '<div class="empty-state">—</div>';
-    document.getElementById("header-status").textContent = "—";
-    return;
-  }
+  if (!mem) { el.innerHTML = '<div class="empty-state">—</div>'; return; }
   const last = mem.last_run || "nunca";
   const cost = mem.month_cost_usd || 0;
-  const alert = cost > 10 ? `<span class="chip chip-red">Acima do limite!</span>` : `<span class="chip chip-green">OK</span>`;
-  el.innerHTML = `
-    <div style="font-size:.82rem;line-height:2">
-      <div>Última rodada: <strong>${last.slice(0,16).replace("T"," ")}</strong></div>
-      <div>Custo mês: <strong>US$ ${cost.toFixed(4)}</strong> ${alert}</div>
-      <div>Próxima: dias úteis 13h BRT</div>
-    </div>`;
+  const alert = cost > 10
+    ? `<span class="chip chip-red">Acima do limite!</span>`
+    : `<span class="chip chip-green">OK</span>`;
+  el.innerHTML = `<div style="font-size:.82rem;line-height:2">
+    <div>Última rodada: <strong>${last.slice(0,16).replace("T"," ")}</strong></div>
+    <div>Custo mês: <strong>US$ ${cost.toFixed(4)}</strong> ${alert}</div>
+    <div>Próxima: dias úteis 13h BRT</div>
+  </div>`;
   document.getElementById("header-status").textContent = last.slice(0,10);
+
+  // Verifica se houve nova rodada
+  checkNewRun(last);
 }
 
 // ── Recomendações ─────────────────────────────────────────
@@ -473,10 +466,9 @@ async function loadRecommendations() {
   const contentEl = document.getElementById("rec-content");
   metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Carregando…</div>';
   contentEl.innerHTML = "";
-
   const mem = await readJsonFromRepo("agent_memory.json");
   if (!mem || !mem.last_recommendations) {
-    metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Nenhuma rodada ainda.</div>';
+    metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Nenhuma rodada com o novo código ainda.</div>';
     contentEl.innerHTML = '<div class="empty-state">Execute "⚡ Rodar agora" no Dashboard.</div>';
     return;
   }
@@ -488,7 +480,6 @@ function renderRecommendations(rec, metaEl, contentEl) {
   metaEl.innerHTML = `<div style="font-size:.82rem;color:var(--muted)">Última rodada: <strong>${ts || "—"}</strong></div>`;
 
   let html = "";
-
   const entries = rec.new_entries || [];
   if (entries.length) {
     html += '<div class="section-title">Novas entradas</div>';
@@ -519,11 +510,10 @@ function renderRecommendations(rec, metaEl, contentEl) {
     for (const p of positions) {
       const action = p.action || "MANTER";
       const isExit = action === "VENDER" || action === "ZERAR";
-      const chipCls = isExit ? "chip-red" : "chip-green";
       html += `<div class="card">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span style="font-size:1rem;font-weight:700">${p.ticker}</span>
-          <span class="chip ${chipCls}">${action}</span>
+          <span class="chip ${isExit ? "chip-red" : "chip-green"}">${action}</span>
           ${p.new_stop ? `<span style="margin-left:auto;font-size:.78rem;color:var(--muted)">Stop → <strong>R$ ${fmtBRL(p.new_stop)}</strong></span>` : ""}
         </div>
         ${p.reason ? `<div style="font-size:.78rem;line-height:1.5">${escapeHtml(String(p.reason))}</div>` : ""}
@@ -536,9 +526,59 @@ function renderRecommendations(rec, metaEl, contentEl) {
     <div class="card"><div style="font-size:.82rem;line-height:1.6">${escapeHtml(String(rec.macro_summary))}</div></div>`;
   }
 
-  if (!html) html = '<div class="empty-state">Sem recomendações nesta rodada.</div>';
-  contentEl.innerHTML = html;
+  contentEl.innerHTML = html || '<div class="empty-state">Sem recomendações nesta rodada.</div>';
 }
+
+// ── Notificações ──────────────────────────────────────────
+function checkNewRun(currentRun) {
+  if (!currentRun) return;
+  const lastKnown = localStorage.getItem("b3_last_known_run") || "";
+  if (!lastKnown) {
+    localStorage.setItem("b3_last_known_run", currentRun);
+    return;
+  }
+  if (currentRun !== lastKnown) {
+    localStorage.setItem("b3_last_known_run", currentRun);
+    notify("B3 Agent", "✦ Novas recomendações disponíveis!");
+    loadRecommendations();
+  }
+}
+
+function notify(title, body) {
+  toast(`🔔 ${body}`, 5000);
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon: "icon.svg" });
+  }
+}
+
+function requestNotifPermission() {
+  if (!("Notification" in window)) {
+    toast("Notificações não suportadas neste browser.");
+    return;
+  }
+  Notification.requestPermission().then(p => {
+    updateNotifStatus();
+    toast(p === "granted" ? "🔔 Notificações ativadas!" : "Notificações bloqueadas pelo browser.");
+  });
+}
+
+function updateNotifStatus() {
+  const el = document.getElementById("notif-status");
+  if (!el) return;
+  if (!("Notification" in window)) { el.textContent = "Não suportado neste browser."; return; }
+  const s = { granted: "✅ Ativadas", denied: "❌ Bloqueadas (habilite nas configurações do Android)", default: "⚪ Não solicitadas" };
+  el.textContent = s[Notification.permission] || "";
+}
+
+// Polling a cada 5 min quando app está aberto
+setInterval(async () => {
+  if (!CFG.ghToken || !CFG.ghRepo) return;
+  try {
+    const mem = await readJsonFromRepo("agent_memory.json");
+    if (mem?.last_run) checkNewRun(mem.last_run);
+  } catch (_) {}
+}, 5 * 60 * 1000);
 
 // ── Stop modal ────────────────────────────────────────────
 function openStopModal()  { document.getElementById("stop-overlay").classList.add("open"); }
@@ -547,34 +587,23 @@ function closeStopModal() { document.getElementById("stop-overlay").classList.re
 async function executeStop() {
   const ticker = document.getElementById("stop-ticker").value.trim().toUpperCase();
   const value  = parseFloat(document.getElementById("stop-value").value.replace(",", "."));
-  if (!ticker || isNaN(value) || value <= 0) {
-    toast("Preencha ticker e valor válido.");
-    return;
-  }
-  if (!CFG.ghToken || !CFG.ghRepo) {
-    toast("Configure GitHub Token e Repo em ⚙️");
-    return;
-  }
-
+  if (!ticker || isNaN(value) || value <= 0) { toast("Preencha ticker e valor válido."); return; }
+  if (!CFG.ghToken || !CFG.ghRepo) { toast("Configure credenciais em ⓘ"); return; }
   try {
     const metaResp = await ghFetch("/contents/portfolio_state.json");
     if (!metaResp.ok) { toast("Erro ao ler portfolio_state.json"); return; }
     const meta = await metaResp.json();
-
     const state = JSON.parse(atob(meta.content.replace(/\n/g, "")));
     const pos = (state.positions || []).find(p => p.ticker === ticker);
     if (!pos) { toast(`${ticker} não encontrado na carteira.`); return; }
     const oldStop = pos.stop;
     pos.stop = value;
-
-    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
     const putResp = await ghFetch("/contents/portfolio_state.json", {
       method: "PUT",
       body: JSON.stringify({
         message: `chore: atualiza stop ${ticker} ${oldStop} → ${value}`,
-        content: newContent,
-        sha: meta.sha,
-        branch: "main",
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2)))),
+        sha: meta.sha, branch: "main",
       }),
     });
     if (putResp.status === 200 || putResp.status === 201) {
@@ -584,9 +613,7 @@ async function executeStop() {
     } else {
       toast(`Erro ${putResp.status} ao salvar.`);
     }
-  } catch (e) {
-    toast("Erro: " + e.message);
-  }
+  } catch (e) { toast("Erro: " + e.message); }
 }
 
 // ── Chat ──────────────────────────────────────────────────
@@ -596,33 +623,23 @@ async function sendMessage() {
   const input = document.getElementById("chat-input");
   const text  = input.value.trim();
   if (!text) return;
-  if (!CFG.anthropicKey) {
-    toast("Configure a Anthropic API Key em ⚙️");
-    return;
-  }
-
+  if (!CFG.anthropicKey) { toast("Configure a Anthropic API Key em ⓘ"); return; }
   input.value = "";
   input.style.height = "40px";
   appendMessage("user", text);
-
   const typingEl = appendMessage("bot", "…");
   const sendBtn  = document.getElementById("send-btn");
   sendBtn.disabled = true;
-
-  let portfolioCtx = "";
+  let ctx = "";
   try {
     const [state, mem] = await Promise.all([
       readJsonFromRepo("portfolio_state.json"),
       readJsonFromRepo("agent_memory.json"),
     ]);
-    if (state) portfolioCtx += "Carteira: " + JSON.stringify(state).slice(0, 1200);
-    if (mem?.last_recommendations) {
-      portfolioCtx += " Recomendações: " + JSON.stringify(mem.last_recommendations).slice(0, 1000);
-    }
+    if (state) ctx += "Carteira: " + JSON.stringify(state).slice(0, 1200);
+    if (mem?.last_recommendations) ctx += " Recomendações: " + JSON.stringify(mem.last_recommendations).slice(0, 1000);
   } catch (_) {}
-
   chatHistory.push({ role: "user", content: text });
-
   try {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -635,24 +652,20 @@ async function sendMessage() {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 800,
-        system: `Você é o B3 Agent, assistente pessoal de swing trade para B3. Responda de forma direta e concisa em português. Limite a 350 palavras. ${portfolioCtx}`,
+        system: `Você é o B3 Agent, assistente pessoal de swing trade para B3. Responda de forma direta e concisa em português. Limite a 350 palavras. ${ctx}`,
         messages: chatHistory.slice(-8),
       }),
     });
-
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
       typingEl.textContent = `Erro ${resp.status}: ${err.error?.message || "Falha na API."}`;
-      chatHistory.pop();
-      return;
+      chatHistory.pop(); return;
     }
-
     const data = await resp.json();
     const answer = data.content?.[0]?.text || "Sem resposta.";
     typingEl.innerHTML = formatBotMsg(answer);
     chatHistory.push({ role: "assistant", content: answer });
     if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
-
   } catch (e) {
     typingEl.textContent = "Erro de rede: " + e.message;
     chatHistory.pop();
@@ -674,9 +687,9 @@ function appendMessage(role, text) {
 function formatBotMsg(text) {
   return escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g,     "<em>$1</em>")
-    .replace(/`([^`]+)`/g,     "<code>$1</code>")
-    .replace(/\n/g,            "<br>");
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\n/g, "<br>");
 }
 
 function escapeHtml(s) {
@@ -694,9 +707,7 @@ document.getElementById("chat-input").addEventListener("input", function() {
 });
 
 // ── Init ──────────────────────────────────────────────────
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-}
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 loadPortfolio();
 loadStatus();
