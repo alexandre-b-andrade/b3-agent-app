@@ -333,7 +333,8 @@ async function readJsonFromRepo(filename) {
   }
   const data = await resp.json();
   const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, "")), c => c.charCodeAt(0));
-  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  const text = new TextDecoder("utf-8").decode(bytes).replace(/:\s*NaN/g, ": 0").replace(/:\s*Infinity/g, ": 0");
+  return JSON.parse(text);
 }
 
 // ── Workflow triggers ─────────────────────────────────────
