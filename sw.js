@@ -1,6 +1,6 @@
 // Service Worker — B3 Agent PWA
 // Cache somente o app shell (HTML/JS/CSS). Dados são sempre buscados ao vivo.
-const CACHE = "b3agent-v3";
+const CACHE = "b3agent-v4";
 const SHELL = ["./", "./index.html"];
 
 self.addEventListener("install", e => {

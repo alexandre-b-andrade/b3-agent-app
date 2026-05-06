@@ -45,11 +45,11 @@ nav {
 }
 nav button {
   flex: 1; background: none; border: none; color: rgba(255,255,255,0.5);
-  padding: 10px 4px 6px; font-size: 0.65rem; cursor: pointer;
+  padding: 10px 4px 6px; font-size: 0.6rem; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s;
 }
 nav button.active { color: var(--gold); }
-nav button svg { width: 22px; height: 22px; }
+nav button svg { width: 20px; height: 20px; }
 
 /* ── Cards ──────────────────────────────────────────────── */
 .card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
@@ -82,6 +82,11 @@ nav button svg { width: 22px; height: 22px; }
 .chip-green { background: #e8f8f0; color: #1a7a45; }
 .chip-red   { background: #fdecea; color: #c0392b; }
 .chip-warn  { background: #fef5e4; color: #9a6a00; }
+.chip-blue  { background: #e8eef8; color: #1a3a7a; }
+
+/* ── Recomendações ──────────────────────────────────────── */
+.rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: .78rem; color: var(--muted); margin-bottom: 8px; }
+.rec-grid strong { color: var(--text); }
 
 /* ── Chat ───────────────────────────────────────────────── */
 #chat-page { display: none; flex-direction: column; padding: 0; }
@@ -113,7 +118,7 @@ nav button svg { width: 22px; height: 22px; }
 .sheet-row input:focus { border-color: var(--accent); }
 
 /* ── Toast ──────────────────────────────────────────────── */
-#toast { position: fixed; bottom: calc(70px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: #fff; padding: 9px 18px; border-radius: 20px; font-size: 0.82rem; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 200; white-space: nowrap; }
+#toast { position: fixed; bottom: calc(70px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: #fff; padding: 9px 18px; border-radius: 20px; font-size: 0.82rem; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 200; white-space: nowrap; max-width: 90vw; text-align: center; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ── Loading spinner ────────────────────────────────────── */
@@ -158,7 +163,7 @@ a { color: var(--accent); }
           <button class="btn btn-gold" id="btn-rodar" onclick="triggerRodar()">⚡ Rodar agora</button>
           <button class="btn btn-primary" id="btn-atualizar" onclick="triggerAtualizar()">📋 Processar notas</button>
         </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Rodar aciona o pipeline completo (~5 min). O resultado chega pelo Telegram.</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Pipeline completo ~10 min. Recomendações ficam disponíveis na aba ✦.</p>
       </div>
 
       <div class="card" id="status-card">
@@ -167,6 +172,17 @@ a { color: var(--accent); }
       </div>
 
     </div><!-- /dash-page -->
+
+    <!-- Recomendações -->
+    <div class="page" id="rec-page">
+      <div class="card">
+        <div id="rec-meta"><div style="font-size:.82rem;color:var(--muted)">Carregando…</div></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button>
+        </div>
+      </div>
+      <div id="rec-content"></div>
+    </div><!-- /rec-page -->
 
     <!-- Chat -->
     <div class="page" id="chat-page">
@@ -233,6 +249,10 @@ a { color: var(--accent); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Dashboard
     </button>
+    <button id="nav-rec" onclick="showPage('rec')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      Recomend.
+    </button>
     <button id="nav-chat" onclick="showPage('chat')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Chat
@@ -278,6 +298,7 @@ function saveSettings() {
   toast("Configurações salvas!");
   loadPortfolio();
   loadStatus();
+  loadRecommendations();
 }
 
 function loadSettingsUI() {
@@ -293,6 +314,7 @@ function showPage(name) {
   document.getElementById(name + "-page").classList.add("active");
   document.getElementById("nav-" + name).classList.add("active");
   if (name === "settings") loadSettingsUI();
+  if (name === "rec") loadRecommendations();
 }
 
 // ── Toast ─────────────────────────────────────────────────
@@ -342,9 +364,9 @@ async function triggerWorkflow(workflow, label) {
       body: JSON.stringify({ ref: "main" }),
     });
     if (resp.status === 204) {
-      toast(`✅ ${workflow} acionado! (~5 min)`);
+      toast(`✅ Workflow acionado! (~10 min)`);
     } else {
-      toast(`⚠️ Erro ${resp.status}. Verifique o token.`);
+      toast(`⚠️ Erro ${resp.status}. Verifique o token (escopo workflow).`);
     }
   } catch (e) {
     toast("Falha de rede.");
@@ -363,7 +385,7 @@ async function loadPortfolio() {
   el.innerHTML = '<div class="empty-state">Carregando…</div>';
   const state = await readJsonFromRepo("portfolio_state.json");
   if (!state) {
-    el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais.</div>';
+    el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais em ⚙️.</div>';
     return;
   }
   renderPortfolio(state);
@@ -409,7 +431,6 @@ function renderPortfolio(state) {
     </table>
     </div>`;
 
-  // Alertas de stop próximo
   positions.forEach(p => {
     if (p.stop > 0 && p.current_price > 0) {
       const dist = (p.current_price - p.stop) / p.current_price * 100;
@@ -446,6 +467,79 @@ async function loadStatus() {
   document.getElementById("header-status").textContent = last.slice(0,10);
 }
 
+// ── Recomendações ─────────────────────────────────────────
+async function loadRecommendations() {
+  const metaEl    = document.getElementById("rec-meta");
+  const contentEl = document.getElementById("rec-content");
+  metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Carregando…</div>';
+  contentEl.innerHTML = "";
+
+  const mem = await readJsonFromRepo("agent_memory.json");
+  if (!mem || !mem.last_recommendations) {
+    metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Nenhuma rodada ainda.</div>';
+    contentEl.innerHTML = '<div class="empty-state">Execute "⚡ Rodar agora" no Dashboard.</div>';
+    return;
+  }
+  renderRecommendations(mem.last_recommendations, metaEl, contentEl);
+}
+
+function renderRecommendations(rec, metaEl, contentEl) {
+  const ts = (rec.run_timestamp || rec.date || "").slice(0,16).replace("T"," ");
+  metaEl.innerHTML = `<div style="font-size:.82rem;color:var(--muted)">Última rodada: <strong>${ts || "—"}</strong></div>`;
+
+  let html = "";
+
+  const entries = rec.new_entries || [];
+  if (entries.length) {
+    html += '<div class="section-title">Novas entradas</div>';
+    for (const e of entries) {
+      const sc = Number(e.score) || 0;
+      const scColor = sc >= 80 ? "var(--green)" : sc >= 60 ? "var(--warn)" : "var(--red)";
+      html += `<div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:1rem;font-weight:700">${e.ticker}</span>
+          <span class="chip chip-green">COMPRAR</span>
+          <span style="margin-left:auto;font-weight:700;font-size:.9rem;color:${scColor}">${sc}</span>
+        </div>
+        <div class="rec-grid">
+          <div>Aloc: <strong>${e.allocation_pct ?? "—"}%</strong></div>
+          <div>Lote: <strong>${e.lot_size ?? "—"}</strong></div>
+          <div>Entrada: <strong>R$ ${fmtBRL(e.entry_price)}</strong></div>
+          <div>Stop: <strong>R$ ${fmtBRL(e.stop)}</strong></div>
+          <div style="grid-column:span 2">Alvo: <strong>R$ ${fmtBRL(e.target)}</strong></div>
+        </div>
+        ${e.reason ? `<div style="font-size:.78rem;line-height:1.5">${escapeHtml(String(e.reason))}</div>` : ""}
+      </div>`;
+    }
+  }
+
+  const positions = rec.current_positions || [];
+  if (positions.length) {
+    html += '<div class="section-title">Posições atuais</div>';
+    for (const p of positions) {
+      const action = p.action || "MANTER";
+      const isExit = action === "VENDER" || action === "ZERAR";
+      const chipCls = isExit ? "chip-red" : "chip-green";
+      html += `<div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:1rem;font-weight:700">${p.ticker}</span>
+          <span class="chip ${chipCls}">${action}</span>
+          ${p.new_stop ? `<span style="margin-left:auto;font-size:.78rem;color:var(--muted)">Stop → <strong>R$ ${fmtBRL(p.new_stop)}</strong></span>` : ""}
+        </div>
+        ${p.reason ? `<div style="font-size:.78rem;line-height:1.5">${escapeHtml(String(p.reason))}</div>` : ""}
+      </div>`;
+    }
+  }
+
+  if (rec.macro_summary) {
+    html += `<div class="section-title">Análise macro</div>
+    <div class="card"><div style="font-size:.82rem;line-height:1.6">${escapeHtml(String(rec.macro_summary))}</div></div>`;
+  }
+
+  if (!html) html = '<div class="empty-state">Sem recomendações nesta rodada.</div>';
+  contentEl.innerHTML = html;
+}
+
 // ── Stop modal ────────────────────────────────────────────
 function openStopModal()  { document.getElementById("stop-overlay").classList.add("open"); }
 function closeStopModal() { document.getElementById("stop-overlay").classList.remove("open"); }
@@ -463,12 +557,10 @@ async function executeStop() {
   }
 
   try {
-    // Lê arquivo atual para obter SHA (obrigatório para commits via API)
     const metaResp = await ghFetch("/contents/portfolio_state.json");
     if (!metaResp.ok) { toast("Erro ao ler portfolio_state.json"); return; }
     const meta = await metaResp.json();
 
-    // Decodifica, modifica, re-codifica
     const state = JSON.parse(atob(meta.content.replace(/\n/g, "")));
     const pos = (state.positions || []).find(p => p.ticker === ticker);
     if (!pos) { toast(`${ticker} não encontrado na carteira.`); return; }
@@ -517,11 +609,16 @@ async function sendMessage() {
   const sendBtn  = document.getElementById("send-btn");
   sendBtn.disabled = true;
 
-  // Carrega contexto da carteira para o prompt
   let portfolioCtx = "";
   try {
-    const state = await readJsonFromRepo("portfolio_state.json");
-    if (state) portfolioCtx = JSON.stringify(state).slice(0, 1500);
+    const [state, mem] = await Promise.all([
+      readJsonFromRepo("portfolio_state.json"),
+      readJsonFromRepo("agent_memory.json"),
+    ]);
+    if (state) portfolioCtx += "Carteira: " + JSON.stringify(state).slice(0, 1200);
+    if (mem?.last_recommendations) {
+      portfolioCtx += " Recomendações: " + JSON.stringify(mem.last_recommendations).slice(0, 1000);
+    }
   } catch (_) {}
 
   chatHistory.push({ role: "user", content: text });
@@ -538,8 +635,8 @@ async function sendMessage() {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 800,
-        system: `Você é o B3 Agent, assistente pessoal de swing trade para B3. Responda de forma direta e concisa em português. Limite a 350 palavras. Carteira atual: ${portfolioCtx}`,
-        messages: chatHistory.slice(-8), // últimas 8 mensagens para contexto
+        system: `Você é o B3 Agent, assistente pessoal de swing trade para B3. Responda de forma direta e concisa em português. Limite a 350 palavras. ${portfolioCtx}`,
+        messages: chatHistory.slice(-8),
       }),
     });
 
@@ -583,7 +680,7 @@ function formatBotMsg(text) {
 }
 
 function escapeHtml(s) {
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
 function scrollChat() {
@@ -591,7 +688,6 @@ function scrollChat() {
   el.scrollTop = el.scrollHeight;
 }
 
-// Auto-resize textarea
 document.getElementById("chat-input").addEventListener("input", function() {
   this.style.height = "40px";
   this.style.height = Math.min(this.scrollHeight, 100) + "px";
@@ -602,9 +698,9 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
-// Carrega dados ao iniciar
 loadPortfolio();
 loadStatus();
+loadRecommendations();
 </script>
 </body>
 </html>
