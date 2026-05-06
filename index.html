@@ -38,16 +38,13 @@ nav button svg{width:19px;height:19px}
 .btn:disabled{opacity:.45;pointer-events:none}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
-/* ── Portfolio table (7 colunas, sem scroll horizontal) ── */
-.pt{width:100%;font-size:.65rem;border-collapse:collapse;table-layout:fixed}
-.pt th{text-align:right;font-weight:600;color:var(--muted);padding:3px 2px;font-size:.58rem;border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap}
+/* ── Portfolio table (compact, no horizontal scroll) ── */
+.pt{width:100%;font-size:.73rem;border-collapse:collapse}
+.pt th{text-align:right;font-weight:600;color:var(--muted);padding:3px 4px;font-size:.63rem;border-bottom:1px solid var(--border)}
 .pt th:first-child{text-align:left}
-.pt td{padding:5px 2px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;overflow:hidden;white-space:nowrap}
+.pt td{padding:6px 4px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums}
 .pt td:first-child{text-align:left;font-weight:600}
 .pt tr:last-child td{border-bottom:none;font-weight:700;background:#f8f8f8}
-/* larguras fixas para caber em ~340px */
-.pt col.c-ticker{width:16%}.pt col.c-qty{width:12%}.pt col.c-tot{width:17%}
-.pt col.c-ent{width:14%}.pt col.c-cur{width:14%}.pt col.c-stp{width:14%}.pt col.c-pnl{width:13%}
 .up{color:var(--green)}.down{color:var(--red)}.warn{color:var(--warn)}
 .blurred{filter:blur(5px);user-select:none;pointer-events:none}
 
@@ -373,7 +370,7 @@ function togglePrivacy() {
 }
 
 function applyPrivacy(tbody) {
-  tbody.querySelectorAll("td:not(:first-child)").forEach(td => {
+  tbody.querySelectorAll("td:not(:first-child):not(:last-child)").forEach(td => {
     td.classList.toggle("blurred", privacyOn);
   });
 }
@@ -398,6 +395,7 @@ function renderPortfolio(state) {
     return;
   }
 
+  // Compact table: Ticker | Total | Atual | Stop | P&L%
   let rows = positions.map(p => {
     const pnl = p.pnl_pct || 0;
     const cls = pnl >= 0 ? "up" : "down";
@@ -405,26 +403,20 @@ function renderPortfolio(state) {
     const vtot = p.valor_total || (p.qty * p.current_price);
     return `<tr>
       <td>${p.ticker}</td>
-      <td>${p.qty.toLocaleString("pt-BR")}</td>
-      <td>${fmtK(vtot)}</td>
-      <td>${fmtK(p.avg_price)}</td>
-      <td>${fmtK(p.current_price)}</td>
-      <td>${fmtK(p.stop)}</td>
+      <td>${fmtBRL(vtot)}</td>
+      <td>${fmtBRL(p.current_price)}</td>
+      <td>${fmtBRL(p.stop)}</td>
       <td class="${cls}">${sign}${pnl.toFixed(1)}%</td>
     </tr>`;
   }).join("");
 
   const cash  = state.cash || 0;
   const total = state.total_capital || 0;
-  rows += `<tr><td>CASH</td><td></td><td>${fmtK(cash)}</td><td></td><td></td><td></td><td></td></tr>`;
-  rows += `<tr><td>TOTAL</td><td></td><td>${fmtK(total)}</td><td></td><td></td><td></td><td></td></tr>`;
+  rows += `<tr><td>CASH</td><td>${fmtBRL(cash)}</td><td></td><td></td><td></td></tr>`;
+  rows += `<tr><td>TOTAL</td><td>${fmtBRL(total)}</td><td></td><td></td><td></td></tr>`;
 
   el.innerHTML = `<table class="pt">
-    <colgroup>
-      <col class="c-ticker"><col class="c-qty"><col class="c-tot">
-      <col class="c-ent"><col class="c-cur"><col class="c-stp"><col class="c-pnl">
-    </colgroup>
-    <thead><tr><th>Ticker</th><th>Qtd</th><th>Total</th><th>Ent.</th><th>Atual</th><th>Stop</th><th>P&amp;L%</th></tr></thead>
+    <thead><tr><th>Ticker</th><th>Total</th><th>Atual</th><th>Stop</th><th>P&amp;L%</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 
@@ -444,14 +436,6 @@ function renderPortfolio(state) {
 
 function fmtBRL(v) {
   if (!v && v !== 0) return "—";
-  return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-// Formato compacto: sem decimais acima de 100, 2 casas abaixo de 100
-function fmtK(v) {
-  if (!v && v !== 0) return "—";
-  const abs = Math.abs(v);
-  if (abs >= 1000) return v.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-  if (abs >= 100)  return v.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
   return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
