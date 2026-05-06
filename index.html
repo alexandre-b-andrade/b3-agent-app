@@ -494,7 +494,17 @@ async function loadRecommendations() {
 
 function renderRecommendations(rec, metaEl, contentEl) {
   const ts = (rec.run_timestamp || rec.date || "").slice(0,16).replace("T"," ");
-  metaEl.innerHTML = `<div style="font-size:.82rem;color:var(--muted)">Última rodada: <strong>${ts || "—"}</strong></div>`;
+  const reportLink = rec.report_url
+    ? `<a href="${rec.report_url}" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:600;
+                 color:var(--navy);background:var(--gold);padding:5px 12px;border-radius:20px;
+                 text-decoration:none;margin-top:6px">
+         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+         Relatório completo
+       </a>` : "";
+  metaEl.innerHTML = `
+    <div style="font-size:.82rem;color:var(--muted)">Última rodada: <strong>${ts || "—"}</strong></div>
+    ${reportLink}`;
 
   let html = "";
   const entries = rec.new_entries || [];
