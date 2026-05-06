@@ -321,7 +321,10 @@ async function ghFetch(path, opts = {}) {
 async function readJsonFromRepo(filename) {
   if (!CFG.ghRepo || !CFG.ghToken) return null;
   const resp = await ghFetch(`/contents/${filename}`);
-  if (!resp.ok) return null;
+  if (!resp.ok) {
+    toast(`Erro ${resp.status} ao ler ${filename} — verifique token e repo em ⚙️`, 5000);
+    return null;
+  }
   const data = await resp.json();
   return JSON.parse(atob(data.content.replace(/\n/g, "")));
 }
