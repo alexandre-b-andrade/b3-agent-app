@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<title>B3 Agent</title>
+<link rel="manifest" href="manifest.json">
+<style>
+/* ── Reset e base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:   #1a1a2e;
+  --blue:   #16213e;
+  --accent: #0f3460;
+  --gold:   #e2b04a;
+  --green:  #2ecc71;
+  --red:    #e74c3c;
+  --warn:   #f39c12;
+  --bg:     #f0f2f5;
+  --card:   #ffffff;
+  --text:   #222222;
+  --muted:  #888888;
+  --border: #e0e0e0;
+  --radius: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); overflow: hidden; }
+
+/* ── Layout ────────────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100%; }
+header { background: var(--navy); color: #fff; padding: 14px 16px 10px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+header h1 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+header span { font-size: 0.75rem; opacity: 0.6; }
+.pages { flex: 1; overflow: hidden; position: relative; }
+.page { position: absolute; inset: 0; overflow-y: auto; padding: 12px; display: none; }
+.page.active { display: block; }
+
+/* ── Bottom nav ─────────────────────────────────────────── */
+nav {
+  display: flex; background: var(--navy); flex-shrink: 0;
+  padding-bottom: calc(4px + var(--safe-bottom));
+}
+nav button {
+  flex: 1; background: none; border: none; color: rgba(255,255,255,0.5);
+  padding: 10px 4px 6px; font-size: 0.65rem; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s;
+}
+nav button.active { color: var(--gold); }
+nav button svg { width: 22px; height: 22px; }
+
+/* ── Cards ──────────────────────────────────────────────── */
+.card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.card-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; letter-spacing: .05em; }
+
+/* ── Botões de ação ─────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: opacity .15s, transform .1s; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-gold    { background: var(--gold); color: var(--navy); }
+.btn-green   { background: var(--green); color: #fff; }
+.btn-red     { background: var(--red); color: #fff; }
+.btn-ghost   { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn:disabled { opacity: .45; pointer-events: none; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ── Portfolio table ────────────────────────────────────── */
+.portfolio-table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+.portfolio-table th { text-align: right; font-weight: 600; color: var(--muted); padding: 4px 6px; font-size: 0.68rem; border-bottom: 1px solid var(--border); }
+.portfolio-table th:first-child { text-align: left; }
+.portfolio-table td { padding: 7px 6px; border-bottom: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+.portfolio-table td:first-child { text-align: left; font-weight: 600; }
+.portfolio-table tr:last-child td { border-bottom: none; font-weight: 700; background: #f8f8f8; }
+.up   { color: var(--green); }
+.down { color: var(--red); }
+.warn { color: var(--warn); }
+
+/* ── Status chips ───────────────────────────────────────── */
+.chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+.chip-green { background: #e8f8f0; color: #1a7a45; }
+.chip-red   { background: #fdecea; color: #c0392b; }
+.chip-warn  { background: #fef5e4; color: #9a6a00; }
+
+/* ── Chat ───────────────────────────────────────────────── */
+#chat-page { display: none; flex-direction: column; padding: 0; }
+#chat-page.active { display: flex; }
+#messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; font-size: 0.85rem; line-height: 1.5; word-break: break-word; }
+.msg-user { background: var(--navy); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg-bot  { background: var(--card); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.msg-bot code { background: #f0f0f0; padding: 1px 4px; border-radius: 4px; font-size: 0.82em; }
+#chat-input-row { padding: 10px 12px calc(10px + var(--safe-bottom)); background: var(--card); display: flex; gap: 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
+#chat-input { flex: 1; border: 1.5px solid var(--border); border-radius: 22px; padding: 9px 14px; font-size: 0.9rem; outline: none; resize: none; height: 40px; max-height: 100px; overflow-y: auto; }
+#chat-input:focus { border-color: var(--accent); }
+#send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--navy); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── Settings ───────────────────────────────────────────── */
+.setting-group { margin-bottom: 14px; }
+.setting-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; display: block; }
+.setting-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; outline: none; background: var(--card); }
+.setting-input:focus { border-color: var(--accent); }
+.setting-hint { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+/* ── Stop modal ─────────────────────────────────────────── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 100; align-items: flex-end; justify-content: center; }
+.overlay.open { display: flex; }
+.sheet { background: var(--card); border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + var(--safe-bottom)); width: 100%; max-width: 480px; }
+.sheet h3 { font-size: 1rem; margin-bottom: 14px; }
+.sheet-row { display: flex; gap: 10px; }
+.sheet-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; outline: none; }
+.sheet-row input:focus { border-color: var(--accent); }
+
+/* ── Toast ──────────────────────────────────────────────── */
+#toast { position: fixed; bottom: calc(70px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: #fff; padding: 9px 18px; border-radius: 20px; font-size: 0.82rem; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 200; white-space: nowrap; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Loading spinner ────────────────────────────────────── */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Misc ───────────────────────────────────────────────── */
+.section-title { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 16px 0 8px; }
+.empty-state { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 30px 0; }
+a { color: var(--accent); }
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e2b04a" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    <h1>B3 Agent</h1>
+    <span id="header-status">—</span>
+  </header>
+
+  <!-- Pages -->
+  <div class="pages">
+
+    <!-- Dashboard -->
+    <div class="page active" id="dash-page">
+
+      <div class="card">
+        <div class="card-title">Carteira</div>
+        <div id="portfolio-content"><div class="empty-state">Configure as credenciais em ⚙️ e toque em Atualizar.</div></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="loadPortfolio()">🔄 Atualizar</button>
+          <button class="btn btn-ghost" onclick="openStopModal()">✏️ Editar stop</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Ações</div>
+        <div class="btn-row">
+          <button class="btn btn-gold" id="btn-rodar" onclick="triggerRodar()">⚡ Rodar agora</button>
+          <button class="btn btn-primary" id="btn-atualizar" onclick="triggerAtualizar()">📋 Processar notas</button>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:8px">Rodar aciona o pipeline completo (~5 min). O resultado chega pelo Telegram.</p>
+      </div>
+
+      <div class="card" id="status-card">
+        <div class="card-title">Status</div>
+        <div id="status-content"><div class="empty-state">Carregando…</div></div>
+      </div>
+
+    </div><!-- /dash-page -->
+
+    <!-- Chat -->
+    <div class="page" id="chat-page">
+      <div id="messages">
+        <div class="msg msg-bot">Olá! Sou o B3 Agent. Pergunte sobre sua carteira, tickers ou recomendações.</div>
+      </div>
+      <div id="chat-input-row">
+        <textarea id="chat-input" placeholder="Pergunte sobre sua carteira…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        <button id="send-btn" onclick="sendMessage()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div><!-- /chat-page -->
+
+    <!-- Settings -->
+    <div class="page" id="settings-page">
+      <div class="card">
+        <div class="card-title">Credenciais</div>
+        <div class="setting-group">
+          <label class="setting-label">GitHub Token (PAT com repo + workflow)</label>
+          <input type="password" id="cfg-gh-token" class="setting-input" placeholder="ghp_…">
+          <div class="setting-hint">Settings → Developer settings → Personal access tokens → Classic. Escopos: repo, workflow.</div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Repositório GitHub (owner/repo)</label>
+          <input type="text" id="cfg-gh-repo" class="setting-input" placeholder="alexandre-b-andrade/b3-agent">
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Anthropic API Key (para o chat)</label>
+          <input type="password" id="cfg-anthropic-key" class="setting-input" placeholder="sk-ant-…">
+        </div>
+        <button class="btn btn-primary" style="margin-top:6px" onclick="saveSettings()">💾 Salvar</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Instalar no Android</div>
+        <p style="font-size:0.82rem;line-height:1.6">
+          Este app é um <strong>PWA</strong> — não precisa de APK nem Google Play.<br><br>
+          <strong>Como instalar:</strong><br>
+          1. Abra esta página no <strong>Chrome</strong> no seu Android<br>
+          2. Toque nos 3 pontinhos (⋮) no canto superior direito<br>
+          3. Selecione <strong>"Adicionar à tela inicial"</strong><br>
+          4. Confirme — o ícone do B3 Agent aparecerá na tela inicial<br><br>
+          Após instalar, o app abre em tela cheia, sem barra do browser, como um app nativo.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sobre</div>
+        <p style="font-size:0.8rem;line-height:1.6;color:var(--muted)">
+          B3 Agent v2.0 — uso pessoal.<br>
+          Credenciais armazenadas apenas no dispositivo (localStorage).<br>
+          Dados lidos diretamente do GitHub e Anthropic API.
+        </p>
+      </div>
+    </div><!-- /settings-page -->
+
+  </div><!-- /pages -->
+
+  <!-- Bottom Navigation -->
+  <nav>
+    <button class="active" id="nav-dash" onclick="showPage('dash')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button id="nav-chat" onclick="showPage('chat')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+    </button>
+    <button id="nav-settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Config
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- Stop Modal -->
+<div class="overlay" id="stop-overlay" onclick="if(event.target===this)closeStopModal()">
+  <div class="sheet">
+    <h3>✏️ Atualizar Stop</h3>
+    <div class="sheet-row">
+      <input type="text" id="stop-ticker" placeholder="Ticker (ex: VALE3)" style="text-transform:uppercase">
+      <input type="number" id="stop-value" placeholder="Valor (ex: 64.50)" step="0.01">
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="executeStop()">Atualizar</button>
+      <button class="btn btn-ghost" onclick="closeStopModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────
+const CFG = {
+  get ghToken()    { return localStorage.getItem("b3_gh_token") || ""; },
+  get ghRepo()     { return localStorage.getItem("b3_gh_repo") || ""; },
+  get anthropicKey(){ return localStorage.getItem("b3_anthropic_key") || ""; },
+};
+
+function saveSettings() {
+  localStorage.setItem("b3_gh_token",       document.getElementById("cfg-gh-token").value.trim());
+  localStorage.setItem("b3_gh_repo",        document.getElementById("cfg-gh-repo").value.trim());
+  localStorage.setItem("b3_anthropic_key",  document.getElementById("cfg-anthropic-key").value.trim());
+  toast("Configurações salvas!");
+  loadPortfolio();
+  loadStatus();
+}
+
+function loadSettingsUI() {
+  document.getElementById("cfg-gh-token").value     = CFG.ghToken;
+  document.getElementById("cfg-gh-repo").value      = CFG.ghRepo;
+  document.getElementById("cfg-anthropic-key").value= CFG.anthropicKey;
+}
+
+// ── Navigation ────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  document.getElementById(name + "-page").classList.add("active");
+  document.getElementById("nav-" + name).classList.add("active");
+  if (name === "settings") loadSettingsUI();
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, dur = 2500) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+
+// ── GitHub API helpers ────────────────────────────────────
+async function ghFetch(path, opts = {}) {
+  const url = `https://api.github.com/repos/${CFG.ghRepo}${path}`;
+  const resp = await fetch(url, {
+    ...opts,
+    headers: {
+      Authorization: `token ${CFG.ghToken}`,
+      Accept: "application/vnd.github.v3+json",
+      "Content-Type": "application/json",
+      ...(opts.headers || {}),
+    },
+  });
+  return resp;
+}
+
+async function readJsonFromRepo(filename) {
+  if (!CFG.ghRepo) return null;
+  const url = `https://raw.githubusercontent.com/${CFG.ghRepo}/main/${filename}`;
+  const headers = CFG.ghToken ? { Authorization: `token ${CFG.ghToken}` } : {};
+  const resp = await fetch(url, { headers });
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
+async function triggerWorkflow(workflow, label) {
+  if (!CFG.ghToken || !CFG.ghRepo) {
+    toast("Configure GitHub Token e Repo em ⚙️");
+    return;
+  }
+  const btn = document.getElementById(`btn-${label}`);
+  const orig = btn.innerHTML;
+  btn.innerHTML = `<span class="spinner"></span> Acionando…`;
+  btn.disabled = true;
+  try {
+    const resp = await ghFetch(`/actions/workflows/${workflow}/dispatches`, {
+      method: "POST",
+      body: JSON.stringify({ ref: "main" }),
+    });
+    if (resp.status === 204) {
+      toast(`✅ ${workflow} acionado! (~5 min)`);
+    } else {
+      toast(`⚠️ Erro ${resp.status}. Verifique o token.`);
+    }
+  } catch (e) {
+    toast("Falha de rede.");
+  } finally {
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
+}
+
+function triggerRodar()    { triggerWorkflow("daily_run.yml",      "rodar"); }
+function triggerAtualizar(){ triggerWorkflow("update_portfolio.yml","atualizar"); }
+
+// ── Portfolio ─────────────────────────────────────────────
+async function loadPortfolio() {
+  const el = document.getElementById("portfolio-content");
+  el.innerHTML = '<div class="empty-state">Carregando…</div>';
+  const state = await readJsonFromRepo("portfolio_state.json");
+  if (!state) {
+    el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais.</div>';
+    return;
+  }
+  renderPortfolio(state);
+}
+
+function renderPortfolio(state) {
+  const el = document.getElementById("portfolio-content");
+  const positions = state.positions || [];
+  if (!positions.length && !state.cash) {
+    el.innerHTML = '<div class="empty-state">Carteira vazia. Execute "Rodar agora".</div>';
+    return;
+  }
+
+  let rows = positions.map(p => {
+    const pnl = p.pnl_pct || 0;
+    const cls = pnl >= 0 ? "up" : "down";
+    const sign = pnl >= 0 ? "+" : "";
+    const vtot = p.valor_total || (p.qty * p.current_price);
+    return `<tr>
+      <td>${p.ticker}</td>
+      <td>${p.qty.toLocaleString("pt-BR")}</td>
+      <td>${fmtBRL(vtot)}</td>
+      <td>${fmtBRL(p.avg_price)}</td>
+      <td>${fmtBRL(p.current_price)}</td>
+      <td>${fmtBRL(p.stop)}</td>
+      <td class="${cls}">${sign}${pnl.toFixed(1)}%</td>
+    </tr>`;
+  }).join("");
+
+  const cash  = state.cash || 0;
+  const total = state.total_capital || 0;
+  rows += `<tr><td>CASH</td><td></td><td>${fmtBRL(cash)}</td><td></td><td></td><td></td><td></td></tr>`;
+  rows += `<tr><td>TOTAL</td><td></td><td>${fmtBRL(total)}</td><td></td><td></td><td></td><td></td></tr>`;
+
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="portfolio-table">
+      <thead><tr>
+        <th>Ticker</th><th>Qtd</th><th>Total</th>
+        <th>Entrada</th><th>Atual</th><th>Stop</th><th>P&amp;L%</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+
+  // Alertas de stop próximo
+  positions.forEach(p => {
+    if (p.stop > 0 && p.current_price > 0) {
+      const dist = (p.current_price - p.stop) / p.current_price * 100;
+      if (dist > 0 && dist < 3) {
+        el.innerHTML += `<div style="margin-top:8px"><span class="chip chip-warn">⚠️ ${p.ticker} a ${dist.toFixed(1)}% do stop!</span></div>`;
+      }
+    }
+  });
+}
+
+function fmtBRL(v) {
+  if (!v && v !== 0) return "—";
+  return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ── Status ────────────────────────────────────────────────
+async function loadStatus() {
+  const el = document.getElementById("status-content");
+  const mem = await readJsonFromRepo("agent_memory.json");
+  if (!mem) {
+    el.innerHTML = '<div class="empty-state">—</div>';
+    document.getElementById("header-status").textContent = "—";
+    return;
+  }
+  const last = mem.last_run || "nunca";
+  const cost = mem.month_cost_usd || 0;
+  const alert = cost > 10 ? `<span class="chip chip-red">Acima do limite!</span>` : `<span class="chip chip-green">OK</span>`;
+  el.innerHTML = `
+    <div style="font-size:.82rem;line-height:2">
+      <div>Última rodada: <strong>${last.slice(0,16).replace("T"," ")}</strong></div>
+      <div>Custo mês: <strong>US$ ${cost.toFixed(4)}</strong> ${alert}</div>
+      <div>Próxima: dias úteis 13h BRT</div>
+    </div>`;
+  document.getElementById("header-status").textContent = last.slice(0,10);
+}
+
+// ── Stop modal ────────────────────────────────────────────
+function openStopModal()  { document.getElementById("stop-overlay").classList.add("open"); }
+function closeStopModal() { document.getElementById("stop-overlay").classList.remove("open"); }
+
+async function executeStop() {
+  const ticker = document.getElementById("stop-ticker").value.trim().toUpperCase();
+  const value  = parseFloat(document.getElementById("stop-value").value.replace(",", "."));
+  if (!ticker || isNaN(value) || value <= 0) {
+    toast("Preencha ticker e valor válido.");
+    return;
+  }
+  if (!CFG.ghToken || !CFG.ghRepo) {
+    toast("Configure GitHub Token e Repo em ⚙️");
+    return;
+  }
+
+  try {
+    // Lê arquivo atual para obter SHA (obrigatório para commits via API)
+    const metaResp = await ghFetch("/contents/portfolio_state.json");
+    if (!metaResp.ok) { toast("Erro ao ler portfolio_state.json"); return; }
+    const meta = await metaResp.json();
+
+    // Decodifica, modifica, re-codifica
+    const state = JSON.parse(atob(meta.content.replace(/\n/g, "")));
+    const pos = (state.positions || []).find(p => p.ticker === ticker);
+    if (!pos) { toast(`${ticker} não encontrado na carteira.`); return; }
+    const oldStop = pos.stop;
+    pos.stop = value;
+
+    const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+    const putResp = await ghFetch("/contents/portfolio_state.json", {
+      method: "PUT",
+      body: JSON.stringify({
+        message: `chore: atualiza stop ${ticker} ${oldStop} → ${value}`,
+        content: newContent,
+        sha: meta.sha,
+        branch: "main",
+      }),
+    });
+    if (putResp.status === 200 || putResp.status === 201) {
+      toast(`✅ Stop ${ticker}: R$ ${oldStop.toFixed(2)} → R$ ${value.toFixed(2)}`);
+      closeStopModal();
+      setTimeout(loadPortfolio, 1000);
+    } else {
+      toast(`Erro ${putResp.status} ao salvar.`);
+    }
+  } catch (e) {
+    toast("Erro: " + e.message);
+  }
+}
+
+// ── Chat ──────────────────────────────────────────────────
+let chatHistory = [];
+
+async function sendMessage() {
+  const input = document.getElementById("chat-input");
+  const text  = input.value.trim();
+  if (!text) return;
+  if (!CFG.anthropicKey) {
+    toast("Configure a Anthropic API Key em ⚙️");
+    return;
+  }
+
+  input.value = "";
+  input.style.height = "40px";
+  appendMessage("user", text);
+
+  const typingEl = appendMessage("bot", "…");
+  const sendBtn  = document.getElementById("send-btn");
+  sendBtn.disabled = true;
+
+  // Carrega contexto da carteira para o prompt
+  let portfolioCtx = "";
+  try {
+    const state = await readJsonFromRepo("portfolio_state.json");
+    if (state) portfolioCtx = JSON.stringify(state).slice(0, 1500);
+  } catch (_) {}
+
+  chatHistory.push({ role: "user", content: text });
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": CFG.anthropicKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 800,
+        system: `Você é o B3 Agent, assistente pessoal de swing trade para B3. Responda de forma direta e concisa em português. Limite a 350 palavras. Carteira atual: ${portfolioCtx}`,
+        messages: chatHistory.slice(-8), // últimas 8 mensagens para contexto
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      typingEl.textContent = `Erro ${resp.status}: ${err.error?.message || "Falha na API."}`;
+      chatHistory.pop();
+      return;
+    }
+
+    const data = await resp.json();
+    const answer = data.content?.[0]?.text || "Sem resposta.";
+    typingEl.innerHTML = formatBotMsg(answer);
+    chatHistory.push({ role: "assistant", content: answer });
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+
+  } catch (e) {
+    typingEl.textContent = "Erro de rede: " + e.message;
+    chatHistory.pop();
+  } finally {
+    sendBtn.disabled = false;
+    scrollChat();
+  }
+}
+
+function appendMessage(role, text) {
+  const el = document.createElement("div");
+  el.className = `msg msg-${role}`;
+  el.innerHTML = role === "bot" ? formatBotMsg(text) : escapeHtml(text);
+  document.getElementById("messages").appendChild(el);
+  scrollChat();
+  return el;
+}
+
+function formatBotMsg(text) {
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g,     "<em>$1</em>")
+    .replace(/`([^`]+)`/g,     "<code>$1</code>")
+    .replace(/\n/g,            "<br>");
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function scrollChat() {
+  const el = document.getElementById("messages");
+  el.scrollTop = el.scrollHeight;
+}
+
+// Auto-resize textarea
+document.getElementById("chat-input").addEventListener("input", function() {
+  this.style.height = "40px";
+  this.style.height = Math.min(this.scrollHeight, 100) + "px";
+});
+
+// ── Init ──────────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+// Carrega dados ao iniciar
+loadPortfolio();
+loadStatus();
+</script>
+</body>
+</html>

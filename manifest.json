@@ -1,0 +1,19 @@
+{
+  "name": "B3 Agent",
+  "short_name": "B3 Agent",
+  "description": "Swing trade B3 — recomendações diárias e chat com IA",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
