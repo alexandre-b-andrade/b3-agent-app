@@ -327,10 +327,8 @@ async function readJsonFromRepo(filename) {
 }
 
 async function triggerWorkflow(workflow, label) {
-  if (!CFG.ghToken || !CFG.ghRepo) {
-    toast("Configure GitHub Token e Repo em ⚙️");
-    return;
-  }
+  if (!CFG.ghToken) { toast("Token GitHub não salvo — vá em ⚙️ e clique 💾 Salvar"); return; }
+  if (!CFG.ghRepo)  { toast("Repositório não salvo — vá em ⚙️ e clique 💾 Salvar"); return; }
   const btn = document.getElementById(`btn-${label}`);
   const orig = btn.innerHTML;
   btn.innerHTML = `<span class="spinner"></span> Acionando…`;
