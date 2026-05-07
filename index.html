@@ -660,6 +660,14 @@ async function executeStop() {
       toast(`✅ Stop ${ticker}: R$ ${oldStop.toFixed(2)} → R$ ${value.toFixed(2)}`);
       closeStopModal();
       setTimeout(loadPortfolio, 1000);
+      // Dispara workflow para atualizar snapshot no Sheets com o novo stop
+      ghFetch("/actions/workflows/push_to_sheets.yml/dispatches", {
+        method: "POST",
+        body: JSON.stringify({ ref: "main", inputs: { mode: "snap-only" } }),
+      }).then(r => {
+        if (r && r.status === 204) toast("📊 Atualizando Sheets… (~1 min)");
+        else if (r) toast(`⚠️ Sheets não acionado (token precisa do escopo 'workflow')`);
+      }).catch(() => {});
     } else {
       toast(`Erro ${putResp.status} ao salvar.`);
     }
