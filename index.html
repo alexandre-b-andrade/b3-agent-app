@@ -347,7 +347,9 @@ function toast(msg, dur = 2500) {
 
 // ── GitHub API helpers ────────────────────────────────────
 async function ghFetch(path, opts = {}) {
-  const url = `https://api.github.com/repos/${CFG.ghRepo}${path}`;
+  // Encode each path segment individually so spaces in folder names (e.g. "3. state") become %20
+  const encodedPath = path.split("/").map((seg, i) => i === 0 ? seg : encodeURIComponent(seg)).join("/");
+  const url = `https://api.github.com/repos/${CFG.ghRepo}${encodedPath}`;
   return fetch(url, {
     ...opts,
     headers: {
