@@ -93,10 +93,9 @@ nav button svg{width:19px;height:19px}
 .sheet-row input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.9rem;outline:none}
 .sheet-row input:focus{border-color:var(--accent)}
 
-/* ── Anteriores panel ── */
-#anteriores-panel{background:var(--bg);border-radius:var(--radius);padding:10px;margin-top:8px;border:1px solid var(--border)}
-#anteriores-panel a{display:block;padding:6px 0;font-size:.82rem;border-bottom:1px solid var(--border)}
-#anteriores-panel a:last-child{border-bottom:none}
+/* ── Anteriores dropdown ── */
+#anteriores-select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);margin-top:8px;cursor:pointer}
+#anteriores-select:focus{border-color:var(--accent);outline:none}
 
 /* ── Toast ── */
 #toast{position:fixed;bottom:calc(70px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:9px 18px;border-radius:20px;font-size:.82rem;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:200;white-space:nowrap;max-width:90vw;text-align:center}
@@ -159,7 +158,11 @@ a{color:var(--accent)}
           <button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button>
           <button class="btn btn-ghost" id="btn-anteriores" onclick="toggleAnteriores()">📂 Anteriores</button>
         </div>
-        <div id="anteriores-panel" style="display:none"></div>
+        <div id="anteriores-panel" style="display:none">
+          <select id="anteriores-select" onchange="loadHistoricRec(this.value)">
+            <option value="">Selecione uma rodada anterior…</option>
+          </select>
+        </div>
       </div>
       <div id="rec-content"></div>
     </div>
@@ -297,7 +300,8 @@ a{color:var(--accent)}
 // ── Estado global ─────────────────────────────────────────
 let _portfolioState = null;
 let _feriadosCache = null;   // cached feriados_b3.json
-let _anterioresOpen = false; // toggle state for anteriores panel
+let _anterioresOpen = false;
+let _anterioresHistory = [];  // cached report_history entries
 
 // ── Config ────────────────────────────────────────────────
 const CFG = {
@@ -561,32 +565,88 @@ async function loadStatus() {
 
 // ── Recomendações ─────────────────────────────────────────
 async function loadRecommendations() {
-  const metaEl    = document.getElementById("rec-meta");
-  const contentEl = document.getElementById("rec-content");
+  const metaEl = document.getElementById("rec-meta");
+  document.getElementById("rec-content").innerHTML = "";
   metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Carregando…</div>';
-  contentEl.innerHTML = "";
   const mem = await readJsonFromRepo("3. state/agent_memory.json");
   if (!mem || !mem.last_recommendations) {
     metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Nenhuma rodada com o novo código ainda.</div>';
-    contentEl.innerHTML = '<div class="empty-state">Execute "⚡ Rodar agora" no Dashboard.</div>';
+    document.getElementById("rec-content").innerHTML = '<div class="empty-state">Execute "⚡ Rodar agora" no Dashboard.</div>';
     return;
   }
-  renderRecommendations(mem.last_recommendations, metaEl, contentEl);
+  _renderRecommendations(mem.last_recommendations);
 }
 
-function renderRecommendations(rec, metaEl, contentEl) {
-  const ts = (rec.run_timestamp || rec.date || "").slice(0,16).replace("T"," ");
-  const reportLink = rec.report_url
-    ? `<a href="${rec.report_url}" target="_blank" rel="noopener"
-          style="display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:600;
-                 color:var(--navy);background:var(--gold);padding:5px 12px;border-radius:20px;
-                 text-decoration:none;margin-top:6px">
-         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-         Relatório completo
-       </a>` : "";
-  metaEl.innerHTML = `
-    <div style="font-size:.82rem;color:var(--muted)">Última rodada: <strong>${ts || "—"}</strong></div>
-    ${reportLink}`;
+// ── Anteriores dropdown (C6) ──────────────────────────────
+async function toggleAnteriores() {
+  const panel = document.getElementById("anteriores-panel");
+  _anterioresOpen = !_anterioresOpen;
+  const btn = document.getElementById("btn-anteriores");
+
+  if (!_anterioresOpen) {
+    panel.style.display = "none";
+    btn.textContent = "📂 Anteriores";
+    // Restore current recommendations
+    loadRecommendations();
+    return;
+  }
+
+  btn.textContent = "📂 Fechar";
+  panel.style.display = "block";
+
+  // Use cached history if already loaded
+  if (_anterioresHistory.length) {
+    _populateAnteriorSelect(_anterioresHistory);
+    return;
+  }
+
+  const sel = document.getElementById("anteriores-select");
+  sel.innerHTML = '<option value="">Carregando…</option>';
+  sel.disabled = true;
+
+  try {
+    const mem = await readJsonFromRepo("3. state/agent_memory.json");
+    const history = (mem?.report_history || []).slice().reverse(); // newest first
+    _anterioresHistory = history;
+    _populateAnteriorSelect(history);
+  } catch {
+    sel.innerHTML = '<option value="">Erro ao carregar histórico</option>';
+    sel.disabled = false;
+  }
+}
+
+function _populateAnteriorSelect(history) {
+  const sel = document.getElementById("anteriores-select");
+  sel.disabled = false;
+  if (!history.length) {
+    sel.innerHTML = '<option value="">Nenhuma rodada anterior disponível</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Selecione uma rodada anterior…</option>';
+  history.forEach((entry, i) => {
+    const ts = (entry.run_timestamp || "").slice(0, 16).replace("T", " ");
+    const nEntries = (entry.new_entries || []).length;
+    const nPos = (entry.current_positions || []).length;
+    const label = `${ts}  (${nEntries} entr. · ${nPos} pos.)`;
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+
+function loadHistoricRec(indexStr) {
+  if (indexStr === "") return;
+  const entry = _anterioresHistory[parseInt(indexStr, 10)];
+  if (!entry) return;
+  _renderRecommendations(entry);
+}
+
+function _renderRecommendations(rec) {
+  const metaEl = document.getElementById("rec-meta");
+  const contentEl = document.getElementById("rec-content");
+  const ts = (rec.run_timestamp || "").slice(0, 16).replace("T", " ");
+  metaEl.innerHTML = `<div style="font-size:.82rem;color:var(--muted)">Rodada: <strong>${ts || "—"}</strong></div>`;
 
   let html = "";
   const entries = rec.new_entries || [];
@@ -612,7 +672,6 @@ function renderRecommendations(rec, metaEl, contentEl) {
       </div>`;
     }
   }
-
   const positions = rec.current_positions || [];
   if (positions.length) {
     html += '<div class="section-title">Posições atuais</div>';
@@ -629,52 +688,11 @@ function renderRecommendations(rec, metaEl, contentEl) {
       </div>`;
     }
   }
-
   if (rec.macro_summary) {
     html += `<div class="section-title">Análise macro</div>
     <div class="card"><div style="font-size:.82rem;line-height:1.6">${escapeHtml(String(rec.macro_summary))}</div></div>`;
   }
-
   contentEl.innerHTML = html || '<div class="empty-state">Sem recomendações nesta rodada.</div>';
-}
-
-// ── Anteriores panel (C6) ─────────────────────────────────
-async function toggleAnteriores() {
-  const panel = document.getElementById("anteriores-panel");
-  _anterioresOpen = !_anterioresOpen;
-  if (!_anterioresOpen) {
-    panel.style.display = "none";
-    document.getElementById("btn-anteriores").textContent = "📂 Anteriores";
-    return;
-  }
-  document.getElementById("btn-anteriores").textContent = "📂 Fechar";
-  panel.style.display = "block";
-  panel.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Carregando…</div>';
-
-  try {
-    const mem = await readJsonFromRepo("3. state/agent_memory.json");
-    const history = mem?.report_history;
-    if (Array.isArray(history) && history.length) {
-      let html = "";
-      for (const entry of history.slice().reverse()) {
-        const date = (entry.date || "").slice(0, 16).replace("T", " ");
-        if (entry.report_url) {
-          html += `<a href="${entry.report_url}" target="_blank" rel="noopener">📄 ${date} — Relatório HTML</a>`;
-        }
-        if (entry.txt_url) {
-          html += `<a href="${entry.txt_url}" target="_blank" rel="noopener">📝 ${date} — Relatório TXT</a>`;
-        }
-        if (!entry.report_url && !entry.txt_url) {
-          html += `<div style="font-size:.82rem;padding:6px 0;border-bottom:1px solid var(--border)">${date}</div>`;
-        }
-      }
-      panel.innerHTML = html;
-    } else {
-      panel.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:6px 0">Acesse os relatórios anteriores no <a href="https://drive.google.com" target="_blank" rel="noopener">Google Drive</a></div>';
-    }
-  } catch (e) {
-    panel.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:6px 0">Acesse os relatórios anteriores no <a href="https://drive.google.com" target="_blank" rel="noopener">Google Drive</a></div>';
-  }
 }
 
 // ── Notificações ──────────────────────────────────────────
