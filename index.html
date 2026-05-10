@@ -156,6 +156,7 @@ a{color:var(--accent)}
         <div id="rec-meta"><div style="font-size:.82rem;color:var(--muted)">Carregando…</div></div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button>
+          <a class="btn btn-ghost" id="btn-relatorio" href="#" target="_blank" rel="noopener" style="display:none">📄 Relatório</a>
           <button class="btn btn-ghost" id="btn-anteriores" onclick="toggleAnteriores()">📂 Anteriores</button>
         </div>
         <div id="anteriores-panel" style="display:none">
@@ -302,6 +303,7 @@ let _portfolioState = null;
 let _feriadosCache = null;   // cached feriados_b3.json
 let _anterioresOpen = false;
 let _anterioresHistory = [];  // cached report_history entries
+let _currentReportUrl = "";   // report_url of the currently displayed recommendation
 
 // ── Config ────────────────────────────────────────────────
 const CFG = {
@@ -649,6 +651,16 @@ function _renderRecommendations(rec) {
   const contentEl = document.getElementById("rec-content");
   const ts = (rec.run_timestamp || "").slice(0, 16).replace("T", " ");
   metaEl.innerHTML = `<div style="font-size:.82rem;color:var(--muted)">Rodada: <strong>${ts || "—"}</strong></div>`;
+
+  // Sync the Relatório button to this run's report_url
+  _currentReportUrl = rec.report_url || "";
+  const btnRel = document.getElementById("btn-relatorio");
+  if (_currentReportUrl) {
+    btnRel.href = _currentReportUrl;
+    btnRel.style.display = "";
+  } else {
+    btnRel.style.display = "none";
+  }
 
   let html = "";
   const entries = rec.new_entries || [];
