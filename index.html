@@ -93,6 +93,11 @@ nav button svg{width:19px;height:19px}
 .sheet-row input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.9rem;outline:none}
 .sheet-row input:focus{border-color:var(--accent)}
 
+/* ── Anteriores panel ── */
+#anteriores-panel{background:var(--bg);border-radius:var(--radius);padding:10px;margin-top:8px;border:1px solid var(--border)}
+#anteriores-panel a{display:block;padding:6px 0;font-size:.82rem;border-bottom:1px solid var(--border)}
+#anteriores-panel a:last-child{border-bottom:none}
+
 /* ── Toast ── */
 #toast{position:fixed;bottom:calc(70px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:9px 18px;border-radius:20px;font-size:.82rem;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:200;white-space:nowrap;max-width:90vw;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -127,6 +132,7 @@ a{color:var(--accent)}
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="loadPortfolio()">🔄 Atualizar</button>
           <button class="btn btn-ghost" onclick="openStopModal()">✏️ Stop</button>
+          <button class="btn btn-ghost" onclick="openCashModal()">💵 Cash</button>
         </div>
       </div>
 
@@ -149,7 +155,11 @@ a{color:var(--accent)}
     <div class="page" id="rec-page">
       <div class="card">
         <div id="rec-meta"><div style="font-size:.82rem;color:var(--muted)">Carregando…</div></div>
-        <div class="btn-row"><button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="loadRecommendations()">🔄 Atualizar</button>
+          <button class="btn btn-ghost" id="btn-anteriores" onclick="toggleAnteriores()">📂 Anteriores</button>
+        </div>
+        <div id="anteriores-panel" style="display:none"></div>
       </div>
       <div id="rec-content"></div>
     </div>
@@ -179,19 +189,19 @@ a{color:var(--accent)}
           O pipeline executa 10 etapas em sequência:
           <ol style="margin:6px 0 0 16px;line-height:2">
             <li>Carrega carteira e estado atual</li>
-            <li>Coleta fontes: RSS, scraping de 8 sites, YouTube, CVM, yfinance</li>
+            <li>Coleta fontes: 6 feeds RSS, 6 sites scraping, 12 canais YouTube, 4 fontes de mercado (CVM, BACEN, yfinance)</li>
             <li>Calcula sinais técnicos (RSI, médias, volume)</li>
-            <li>Pontua tickers de 0–100</li>
+            <li>Pontua tickers de 0–100 (técnico 25pts, analistas 25pts, volume 20pts, governança 15pts, memória histórica 15pts)</li>
             <li>Filtra candidatos e monta contexto</li>
             <li>Envia para Claude (IA) que gera recomendações</li>
             <li>Gera relatório HTML e TXT</li>
             <li>Faz upload para o Google Drive</li>
             <li>Grava no Excel e atualiza memória</li>
-            <li>Envia resumo via Telegram</li>
+            <li>Atualiza memória e estado da carteira no repositório</li>
           </ol>
 
           <h4>Fontes de dados</h4>
-          RSS (InfoMoney, CNN Brasil, Suno, Reuters), scraping de sites financeiros, transcrições de canais YouTube, Fatos Relevantes da CVM, dados de mercado via yfinance (preço, RSI, médias, P/L, P/VP, DY).
+          6 feeds RSS (InfoMoney, CNN Brasil, Suno, Reuters e outros), scraping de 6 sites financeiros, transcrições de 12 canais YouTube, 4 fontes de mercado: Fatos Relevantes da CVM, dados BACEN, dados de mercado via yfinance (preço, RSI, médias, P/L, P/VP, DY).
 
           <h4>Carteira reconciliada</h4>
           Notas de corretagem da Clear são lidas automaticamente do Google Drive e processadas por IA para manter a carteira sempre atualizada.
@@ -243,7 +253,7 @@ a{color:var(--accent)}
       Chat
     </button>
     <button id="nav-info" onclick="showPage('info')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Info
     </button>
   </nav>
@@ -266,11 +276,28 @@ a{color:var(--accent)}
   </div>
 </div>
 
+<!-- Cash Modal -->
+<div class="overlay" id="cash-overlay" onclick="if(event.target===this)closeCashModal()">
+  <div class="sheet">
+    <h3>💵 Atualizar Cash</h3>
+    <div id="cash-current" style="font-size:.78rem;color:var(--muted);margin-bottom:10px"></div>
+    <div class="sheet-row">
+      <input type="number" id="cash-value" placeholder="Novo saldo em caixa (ex: 10000.00)" step="0.01">
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="executeCash()">Atualizar</button>
+      <button class="btn btn-ghost" onclick="closeCashModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ── Estado global ─────────────────────────────────────────
 let _portfolioState = null;
+let _feriadosCache = null;   // cached feriados_b3.json
+let _anterioresOpen = false; // toggle state for anteriores panel
 
 // ── Config ────────────────────────────────────────────────
 const CFG = {
@@ -388,7 +415,7 @@ function applyPrivacy(tbody) {
 async function loadPortfolio() {
   const el = document.getElementById("portfolio-content");
   el.innerHTML = '<div class="empty-state">Carregando…</div>';
-  const state = await readJsonFromRepo("portfolio_state.json");
+  const state = await readJsonFromRepo("3. state/portfolio_state.json");
   if (!state) {
     el.innerHTML = '<div class="empty-state">Não foi possível carregar. Verifique as credenciais em ⓘ.</div>';
     return;
@@ -462,25 +489,74 @@ function fmtK(v) {
   return v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ── Next business day label (C5) ──────────────────────────
+async function getFeriados() {
+  if (_feriadosCache !== null) return _feriadosCache;
+  try {
+    const data = await readJsonFromRepo("3. state/feriados_b3.json");
+    _feriadosCache = Array.isArray(data) ? data : (data?.feriados || []);
+  } catch (_) {
+    _feriadosCache = [];
+  }
+  return _feriadosCache;
+}
+
+async function nextRunLabel() {
+  const feriados = await getFeriados();
+  const feriadoSet = new Set(feriados.map(f => typeof f === "string" ? f.slice(0, 10) : ""));
+  // Current datetime in BRT (UTC-3)
+  const nowUtc = new Date();
+  const brtOffset = -3 * 60; // minutes
+  const nowBrt = new Date(nowUtc.getTime() + (brtOffset - nowUtc.getTimezoneOffset()) * 60000);
+
+  const dayNames = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+  // Start from today; if it's before 13:00 BRT today and today is a weekday, use today
+  let candidate = new Date(nowBrt);
+  candidate.setHours(13, 0, 0, 0);
+
+  // If current time is at or past 13:00 BRT today, advance to next day
+  if (nowBrt >= candidate) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+
+  // Find next weekday (Mon=1 … Fri=5) that is not a holiday
+  for (let i = 0; i < 14; i++) {
+    const dow = candidate.getDay(); // 0=Sun,6=Sat
+    const dateStr = candidate.toISOString().slice(0, 10);
+    if (dow >= 1 && dow <= 5 && !feriadoSet.has(dateStr)) {
+      const y = candidate.getFullYear();
+      const m = String(candidate.getMonth() + 1).padStart(2, "0");
+      const d = String(candidate.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d} (${dayNames[dow]}) 13:00 BRT`;
+    }
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return "próximo dia útil 13:00 BRT";
+}
+
 // ── Status ────────────────────────────────────────────────
 async function loadStatus() {
   const el = document.getElementById("status-content");
-  const mem = await readJsonFromRepo("agent_memory.json");
+  const mem = await readJsonFromRepo("3. state/agent_memory.json");
   if (!mem) { el.innerHTML = '<div class="empty-state">—</div>'; return; }
   const last = mem.last_run || "nunca";
   const cost = mem.month_cost_usd || 0;
+  const supadata = mem.month_supadata_credits || 0;
   const alert = cost > 10
     ? `<span class="chip chip-red">Acima do limite!</span>`
     : `<span class="chip chip-green">OK</span>`;
+  const proxima = await nextRunLabel();
   el.innerHTML = `<div style="font-size:.82rem;line-height:2">
     <div>Última rodada: <strong>${last.slice(0,16).replace("T"," ")}</strong></div>
     <div>Custo mês: <strong>US$ ${cost.toFixed(4)}</strong> ${alert}</div>
-    <div>Próxima: dias úteis 13h BRT</div>
+    <div>Supadata mês: <strong>${supadata} créditos</strong></div>
+    <div>Próxima: <strong>${proxima}</strong></div>
   </div>`;
-  document.getElementById("header-status").textContent = "rodada: " + last.slice(0,10);
+  document.getElementById("header-status").textContent = "rodada: " + last.slice(0,16).replace("T"," ");
 
   // Verifica se houve nova rodada
-  checkNewRun(last);
+  checkNewRun(last, mem);
 }
 
 // ── Recomendações ─────────────────────────────────────────
@@ -489,7 +565,7 @@ async function loadRecommendations() {
   const contentEl = document.getElementById("rec-content");
   metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Carregando…</div>';
   contentEl.innerHTML = "";
-  const mem = await readJsonFromRepo("agent_memory.json");
+  const mem = await readJsonFromRepo("3. state/agent_memory.json");
   if (!mem || !mem.last_recommendations) {
     metaEl.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Nenhuma rodada com o novo código ainda.</div>';
     contentEl.innerHTML = '<div class="empty-state">Execute "⚡ Rodar agora" no Dashboard.</div>';
@@ -562,8 +638,47 @@ function renderRecommendations(rec, metaEl, contentEl) {
   contentEl.innerHTML = html || '<div class="empty-state">Sem recomendações nesta rodada.</div>';
 }
 
+// ── Anteriores panel (C6) ─────────────────────────────────
+async function toggleAnteriores() {
+  const panel = document.getElementById("anteriores-panel");
+  _anterioresOpen = !_anterioresOpen;
+  if (!_anterioresOpen) {
+    panel.style.display = "none";
+    document.getElementById("btn-anteriores").textContent = "📂 Anteriores";
+    return;
+  }
+  document.getElementById("btn-anteriores").textContent = "📂 Fechar";
+  panel.style.display = "block";
+  panel.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Carregando…</div>';
+
+  try {
+    const mem = await readJsonFromRepo("3. state/agent_memory.json");
+    const history = mem?.report_history;
+    if (Array.isArray(history) && history.length) {
+      let html = "";
+      for (const entry of history.slice().reverse()) {
+        const date = (entry.date || "").slice(0, 16).replace("T", " ");
+        if (entry.report_url) {
+          html += `<a href="${entry.report_url}" target="_blank" rel="noopener">📄 ${date} — Relatório HTML</a>`;
+        }
+        if (entry.txt_url) {
+          html += `<a href="${entry.txt_url}" target="_blank" rel="noopener">📝 ${date} — Relatório TXT</a>`;
+        }
+        if (!entry.report_url && !entry.txt_url) {
+          html += `<div style="font-size:.82rem;padding:6px 0;border-bottom:1px solid var(--border)">${date}</div>`;
+        }
+      }
+      panel.innerHTML = html;
+    } else {
+      panel.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:6px 0">Acesse os relatórios anteriores no <a href="https://drive.google.com" target="_blank" rel="noopener">Google Drive</a></div>';
+    }
+  } catch (e) {
+    panel.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:6px 0">Acesse os relatórios anteriores no <a href="https://drive.google.com" target="_blank" rel="noopener">Google Drive</a></div>';
+  }
+}
+
 // ── Notificações ──────────────────────────────────────────
-function checkNewRun(currentRun) {
+function checkNewRun(currentRun, mem) {
   if (!currentRun) return;
   const lastKnown = localStorage.getItem("b3_last_known_run") || "";
   if (!lastKnown) {
@@ -572,7 +687,14 @@ function checkNewRun(currentRun) {
   }
   if (currentRun !== lastKnown) {
     localStorage.setItem("b3_last_known_run", currentRun);
-    notify("B3 Agent", "✦ Novas recomendações disponíveis!");
+    // Build richer notification body from memory
+    let body = "✦ Novas recomendações disponíveis!";
+    if (mem?.last_recommendations) {
+      const entries   = (mem.last_recommendations.new_entries || []).length;
+      const positions = (mem.last_recommendations.current_positions || []).length;
+      body = `${entries} nova(s) entrada(s) | ${positions} posição(ões) avaliada(s)`;
+    }
+    notify("B3 Agent", body);
     loadRecommendations();
   }
 }
@@ -608,8 +730,8 @@ function updateNotifStatus() {
 setInterval(async () => {
   if (!CFG.ghToken || !CFG.ghRepo) return;
   try {
-    const mem = await readJsonFromRepo("agent_memory.json");
-    if (mem?.last_run) checkNewRun(mem.last_run);
+    const mem = await readJsonFromRepo("3. state/agent_memory.json");
+    if (mem?.last_run) checkNewRun(mem.last_run, mem);
   } catch (_) {}
 }, 5 * 60 * 1000);
 
@@ -639,7 +761,7 @@ async function executeStop() {
   if (!ticker || isNaN(value) || value <= 0) { toast("Preencha ticker e valor válido."); return; }
   if (!CFG.ghToken || !CFG.ghRepo) { toast("Configure credenciais em ⓘ"); return; }
   try {
-    const metaResp = await ghFetch("/contents/portfolio_state.json");
+    const metaResp = await ghFetch("/contents/3. state/portfolio_state.json");
     if (!metaResp.ok) { toast("Erro ao ler portfolio_state.json"); return; }
     const meta = await metaResp.json();
     const bytes = Uint8Array.from(atob(meta.content.replace(/\n/g, "")), c => c.charCodeAt(0));
@@ -648,7 +770,7 @@ async function executeStop() {
     if (!pos) { toast(`${ticker} não encontrado na carteira.`); return; }
     const oldStop = pos.stop;
     pos.stop = value;
-    const putResp = await ghFetch("/contents/portfolio_state.json", {
+    const putResp = await ghFetch("/contents/3. state/portfolio_state.json", {
       method: "PUT",
       body: JSON.stringify({
         message: `chore: atualiza stop ${ticker} ${oldStop} → ${value}`,
@@ -661,6 +783,62 @@ async function executeStop() {
       closeStopModal();
       setTimeout(loadPortfolio, 1000);
       // Dispara workflow para atualizar snapshot no Sheets com o novo stop
+      ghFetch("/actions/workflows/push_to_sheets.yml/dispatches", {
+        method: "POST",
+        body: JSON.stringify({ ref: "main", inputs: { mode: "snap-only" } }),
+      }).then(r => {
+        if (r && r.status === 204) toast("📊 Atualizando Sheets… (~1 min)");
+        else if (r) toast(`⚠️ Sheets não acionado (token precisa do escopo 'workflow')`);
+      }).catch(() => {});
+    } else {
+      toast(`Erro ${putResp.status} ao salvar.`);
+    }
+  } catch (e) { toast("Erro: " + e.message); }
+}
+
+// ── Cash modal (C2) ───────────────────────────────────────
+function openCashModal() {
+  const current = _portfolioState?.cash;
+  const hint = document.getElementById("cash-current");
+  hint.textContent = current != null
+    ? `Cash atual: R$ ${fmtBRL(current)}`
+    : "Cash atual: não carregado";
+  document.getElementById("cash-value").value = "";
+  document.getElementById("cash-overlay").classList.add("open");
+}
+
+function closeCashModal() { document.getElementById("cash-overlay").classList.remove("open"); }
+
+async function executeCash() {
+  const value = parseFloat(document.getElementById("cash-value").value.replace(",", "."));
+  if (isNaN(value) || value < 0) { toast("Informe um valor válido para o cash."); return; }
+  if (!CFG.ghToken || !CFG.ghRepo) { toast("Configure credenciais em ⓘ"); return; }
+  try {
+    const metaResp = await ghFetch("/contents/3. state/portfolio_state.json");
+    if (!metaResp.ok) { toast("Erro ao ler portfolio_state.json"); return; }
+    const meta = await metaResp.json();
+    const bytes = Uint8Array.from(atob(meta.content.replace(/\n/g, "")), c => c.charCodeAt(0));
+    const state = JSON.parse(new TextDecoder("utf-8").decode(bytes));
+    const oldCash = state.cash || 0;
+    state.cash = value;
+    // Recalculate total_capital = cash + sum of positions valor_total
+    const posTotal = (state.positions || []).reduce((acc, p) => {
+      return acc + (p.valor_total || (p.qty * (p.current_price || 0)));
+    }, 0);
+    state.total_capital = value + posTotal;
+    const putResp = await ghFetch("/contents/3. state/portfolio_state.json", {
+      method: "PUT",
+      body: JSON.stringify({
+        message: `chore: atualiza cash R$ ${oldCash.toFixed(2)} → R$ ${value.toFixed(2)}`,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2)))),
+        sha: meta.sha, branch: "main",
+      }),
+    });
+    if (putResp.status === 200 || putResp.status === 201) {
+      toast(`✅ Cash: R$ ${fmtBRL(oldCash)} → R$ ${fmtBRL(value)}`);
+      closeCashModal();
+      setTimeout(loadPortfolio, 1000);
+      // Dispara workflow para atualizar snapshot no Sheets
       ghFetch("/actions/workflows/push_to_sheets.yml/dispatches", {
         method: "POST",
         body: JSON.stringify({ ref: "main", inputs: { mode: "snap-only" } }),
@@ -691,8 +869,8 @@ async function sendMessage() {
   let ctx = "";
   try {
     const [state, mem] = await Promise.all([
-      readJsonFromRepo("portfolio_state.json"),
-      readJsonFromRepo("agent_memory.json"),
+      readJsonFromRepo("3. state/portfolio_state.json"),
+      readJsonFromRepo("3. state/agent_memory.json"),
     ]);
     if (state) ctx += "Carteira: " + JSON.stringify(state).slice(0, 1200);
     if (mem?.last_recommendations) ctx += " Recomendações: " + JSON.stringify(mem.last_recommendations).slice(0, 1000);
